@@ -37,5 +37,3 @@ nStates   = size(x0,2);
 nControls = 2;
 nCBFs     = 4 + (nAgents-1);
 idx       = [1:1:nAgents];
-uLast     = zeros(nAgents,nControls);
-

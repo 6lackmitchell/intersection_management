@@ -28,12 +28,8 @@ position = [100 50 700 700];
 set(gcf, 'Position', position)
 
 hold on
-plot(-5,0,'x','Linewidth',lw,'Color',color(1))
-plot(0,-5,'x','Linewidth',lw,'Color',color(2))
-plot(5,0,'x','Linewidth',lw,'Color',color(3))
-plot(0,5,'x','Linewidth',lw,'Color',color(4))
 for oo = 1:length(obstacles)
-    plot(obstacles(oo).x,obstacles(oo).y,'k','Linewidth',lw+2)
+    plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
 end
 for ii=1:1:nAgents
     plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw);
@@ -54,17 +50,13 @@ end
 
 % If the movie is going too slow, you can increase the "stride" value, e.g.
 %   put "for j = 1:10:maxsteps" or some other number in the middle.
-for tt=1:1:maxsteps
+for tt=1:10:maxsteps
     
     clf
     set(gcf, 'Position', position)
     hold on
-    plot(-5,0,'x','MarkerSize',5*lw,'Color',color(1))
-    plot(0,-5,'x','MarkerSize',5*lw,'Color',color(2))
-    plot(5,0,'x','MarkerSize',5*lw,'Color',color(3))
-    plot(0,5,'x','MarkerSize',5*lw,'Color',color(4))
     for oo = 1:length(obstacles)
-        plot(obstacles(oo).x,obstacles(oo).y,'k','Linewidth',lw+2)
+        plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
     end
     for ii=1:1:nAgents
         plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw);

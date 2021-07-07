@@ -60,23 +60,15 @@ for ii = 1:nTimesteps
     xx                = squeeze(x(ii,:,:));
     
     % Update Settings
-    quit_flags = zeros(nAgents,1);
     for aa = 1:size(xGoal,1)
         addidx      = (norm(squeeze(xGoal(aa,gidx(aa),:) - x(ii,aa,:))) < tol);
         newidx      = gidx(aa) + addidx;
-        if newidx > size(xGoal,2)
-            quit_flags(aa) = 1;
-        end
         gidx(aa)    = min(newidx,size(xGoal,2));
         xg(aa,:)    = xGoal(aa,gidx(aa),:);
 %         uLast(aa,:) = squeeze(u(max(ii-1,1),aa,:));
-%         if true%addidx > 0
-%             uLast = 0*uLast;
-%         end
-    end
-    
-    if all(quit_flags == 1)
-        break
+        if true%addidx > 0
+            uLast = 0*uLast;
+        end
     end
     
     settings          = struct('dynamics',@dynamics,'xGoal',xg,'uLast',uLast);
@@ -96,78 +88,58 @@ beep
 % filename = 'datastore/single_integrator/four_ellipses_distributed.mat';
 % load(filename)
 lw = 3.0;
-tt = linspace(dt,ii*dt,ii);
-edge_SEvx =  3.0*ones(ii,1);
-edge_SEvy = linspace(-13.0,-3.0,ii);
-edge_SEhx = linspace(3.0,13.0,ii);
-edge_SEhy = -3.0*ones(ii,1);
+tt = linspace(dt,nTimesteps*dt,nTimesteps);
+edge_SEvx =  3.0*ones(nTimesteps,1);
+edge_SEvy = linspace(-13.0,-3.0,nTimesteps);
+edge_SEhx = linspace(3.0,13.0,nTimesteps);
+edge_SEhy = -3.0*ones(nTimesteps,1);
 
-edge_SWvx = -3.0*ones(ii,1);
-edge_SWvy = linspace(-13.0,-3.0,ii);
-edge_SWhx = linspace(-13.0,-3.0,ii);
-edge_SWhy = -3.0*ones(ii,1);
+edge_SWvx = -3.0*ones(nTimesteps,1);
+edge_SWvy = linspace(-13.0,-3.0,nTimesteps);
+edge_SWhx = linspace(-13.0,-3.0,nTimesteps);
+edge_SWhy = -3.0*ones(nTimesteps,1);
 
-edge_NEvx =  3.0*ones(ii,1);
-edge_NEvy = linspace(3.0,13.0,ii);
-edge_NEhx = linspace(3.0,13.0,ii);
-edge_NEhy =  3.0*ones(ii,1);
+edge_NEvx =  3.0*ones(nTimesteps,1);
+edge_NEvy = linspace(-13.0,-3.0,nTimesteps);
+edge_NEhx = linspace(3.0,13.0,nTimesteps);
+edge_SEhy = -3.0*ones(nTimesteps,1);
 
-edge_NWvx = -3.0*ones(ii,1);
-edge_NWvy = linspace(3.0,13.0,ii);
-edge_NWhx = linspace(-13.0,-3.0,ii);
-edge_NWhy =  3.0*ones(ii,1);
-
-center_Sx =  0.0*ones(ii,1);
-center_Sy = linspace(-13.0,-3.0,ii);
-
-center_Nx =  0.0*ones(ii,1);
-center_Ny = linspace(3.0,13.0,ii);
-
-center_Ex = linspace(3.0,13.0,ii);
-center_Ey = 0.0*ones(ii,1);
-
-center_Wx = linspace(-13.0,-3.0,ii);
-center_Wy = 0.0*ones(ii,1);
-
-obstacles = [struct('x',edge_SEvx,'y',edge_SEvy,'color','k'),
-             struct('x',edge_SEhx,'y',edge_SEhy,'color','k'),
-             struct('x',edge_SWvx,'y',edge_SWvy,'color','k'),
-             struct('x',edge_SWhx,'y',edge_SWhy,'color','k'),
-             struct('x',edge_NEvx,'y',edge_NEvy,'color','k'),
-             struct('x',edge_NEhx,'y',edge_NEhy,'color','k'),
-             struct('x',edge_NWvx,'y',edge_NWvy,'color','k'),
-             struct('x',edge_NWhx,'y',edge_NWhy,'color','k'),
-             struct('x',center_Sx,'y',center_Sy,'color','y'),
-             struct('x',center_Nx,'y',center_Ny,'color','y'),
-             struct('x',center_Ex,'y',center_Ey,'color','y'),
-             struct('x',center_Wx,'y',center_Wy,'color','y')];
+edge_SWvx = -3.0*ones(nTimesteps,1);
+edge_SWvy = linspace(-13.0,-3.0,nTimesteps);
+edge_SWhx = linspace(-13.0,-3.0,nTimesteps);
+edge_SWhy = -3.0*ones(nTimesteps,1);
 
 
 
-% load(road_objects.mat)
-% ell1x = cx1 + dx1.*cos(2*pi*tt); ell1y = cy1 + dy1.*sin(2*pi*tt);
-% ell2x = cx2 + dx2.*cos(2*pi*tt); ell2y = cy2 + dy2.*sin(2*pi*tt);
-% ell3x = cx3 + dx3.*cos(2*pi*tt); ell3y = cy3 + dy3.*sin(2*pi*tt);
-% ell4x = cx4 + dx4.*cos(2*pi*tt); ell4y = cy4 + dy4.*sin(2*pi*tt);
 
-% figure(1);
-% title('State Trajectories')
-% hold on
-% plot(ell1x,ell1y,'k','LineWidth',lw)
-% plot(ell2x,ell2y,'k','LineWidth',lw)
-% plot(ell3x,ell3y,'k','LineWidth',lw)
-% plot(ell4x,ell4y,'k','LineWidth',lw)
-% for ii = 1:nAgents
-%     plot(x(:,ii,1),x(:,ii,2),'LineWidth',lw)
-% end
-% hold off
+%%
+
+
+
+load(road_objects.mat)
+ell1x = cx1 + dx1.*cos(2*pi*tt); ell1y = cy1 + dy1.*sin(2*pi*tt);
+ell2x = cx2 + dx2.*cos(2*pi*tt); ell2y = cy2 + dy2.*sin(2*pi*tt);
+ell3x = cx3 + dx3.*cos(2*pi*tt); ell3y = cy3 + dy3.*sin(2*pi*tt);
+ell4x = cx4 + dx4.*cos(2*pi*tt); ell4y = cy4 + dy4.*sin(2*pi*tt);
+
+figure(1);
+title('State Trajectories')
+hold on
+plot(ell1x,ell1y,'k','LineWidth',lw)
+plot(ell2x,ell2y,'k','LineWidth',lw)
+plot(ell3x,ell3y,'k','LineWidth',lw)
+plot(ell4x,ell4y,'k','LineWidth',lw)
+for ii = 1:nAgents
+    plot(x(:,ii,1),x(:,ii,2),'LineWidth',lw)
+end
+hold off
 
 figure(2);
 title('Control Inputs')
 hold on
-for jj = 1:1%nAgents
-    plot(tt,u(1:ii,jj,1),'LineWidth',lw)
-    plot(tt,u_nom(1:ii,jj,1),'LineWidth',lw)
+for ii = 1:1%nAgents
+    plot(tt,u(:,ii,1),'LineWidth',lw)
+    plot(tt,u_nom(:,ii,1),'LineWidth',lw)
 end
 legend('A1','A1_{nom}','A2','A2_nom')
 hold off
@@ -184,8 +156,8 @@ hold off
 figure(3);
 title('CLFs')
 hold on
-for jj = 1:nAgents
-    plot(performance(1:ii,jj,1),'LineWidth',lw)
+for ii = 1:nAgents
+    plot(performance(:,ii,1),'LineWidth',lw)
 end
 hold off
 
@@ -194,6 +166,6 @@ filename = strcat('datastore/',dyn_mode,'/',con_mode,'_four_ellipses_TEST2.mat')
 save(filename)
 
 %% Create Movie
-% obstacles = [struct('x',ell1x,'y',ell1y),struct('x',ell2x,'y',ell2y),struct('x',ell3x,'y',ell3y),struct('x',ell4x,'y',ell4y)];
+obstacles = [struct('x',ell1x,'y',ell1y),struct('x',ell2x,'y',ell2y),struct('x',ell3x,'y',ell3y),struct('x',ell4x,'y',ell4y)];
 moviename = erase(filename,'.mat');
-cinematographer(x(1:ii,:,:),obstacles,moviename)
+cinematographer(x,obstacles,moviename)

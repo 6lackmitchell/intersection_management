@@ -28,8 +28,8 @@ Ns = 0;%4 + (nAgents-1);
 q = ones(Nu+Ns,1);
 
 % FxTS Parameters
-c1 = 10;
-c2 = 10;
+c1 = 1;
+c2 = 1;
 e1 = 0.5;
 e2 = 1.5;
 

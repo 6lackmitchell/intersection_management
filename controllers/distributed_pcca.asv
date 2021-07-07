@@ -88,13 +88,13 @@ for aa = 1:Na
             % Update Safety terms
             LfB = 0;
             LgB = 2 * (x(bb,:) - x(cc,:));
-            LwB = -LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
+            LwB = LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
             
             % Update safety matrix
             newrow = zeros(Nua+Ns,1);
             newrow((bb-1)*Nu+(1:Nu)) = -LgB;
             newrow((cc-1)*Nu+(1:Nu)) =  LgB;
-            newcol = LwB + 50*((x(bb,:) - x(cc,:))*(x(bb,:) - x(cc,:))' - R^2);
+            newcol = LwB + ;
             As(row,:) = newrow;
             bs(row)   = newcol;
         end

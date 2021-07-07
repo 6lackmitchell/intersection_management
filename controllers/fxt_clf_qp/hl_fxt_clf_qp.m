@@ -36,14 +36,16 @@ xGoal = settings.xg;
 [f,g] = settings.dyn;
 cost  = settings.cost;
 uLast = settings.uLast;
-Nu    = size(g(t,x(1,:)),2);
+Nu    = size(uLast,2);
 Nua   = Nu*Na;
 
 % Load Optimization Cost Fcn
 min_norm_control = zeros(Nua,1);
 min_deviation_control = reshape(uLast,[Nua 1]);
+const_speed_control = 10*(xGoal(1,1:2) - x(1,1:2))/norm(xGoal(1,1:2) - x(1,1:2));
+model_control = const_speed_control';
 q = ones(Nua,1);
-[Q,p] = cost(min_deviation_control,q,Nua,0,0);
+[Q,p] = cost(model_control,q,Nua,0,0);
 
 A = kron(zeros(Na),zeros(1,Nu));
 b = zeros(Na,1);
@@ -58,8 +60,9 @@ for aa = 1:Na
     FV  = -c1*V(t,xx-xg,xd,aa)^e1 - c2*V(t,xx-xg,xd,aa)^e2;
 
     % Generate Constraint Matrix
-    A(aa,(Nu*aa - Nu)+(1:2)) = LgV;
-    b(aa)                    = FV - LfV;
+%     A(aa,(Nu*aa - Nu)+(1:2)) = LgV;
+    A(aa,Nu*aa+(-(Nu-1):-(Nu-2))) = LgV;
+    b(aa)              = FV - LfV;
 end
 
 if sum(any(isnan(A))) || any(isnan(b))
