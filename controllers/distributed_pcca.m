@@ -47,6 +47,7 @@ u     = zeros(Na,Nu);
 u_nom = zeros(Na,Nua);
 d     = zeros(Na,Ns);
 wHat  = zeros(Na,Na,Nu);
+mincbf = zeros(Na);
 for aa = 1:Na
     [drift,f,g] = dynamics('single_integrator',t,x(aa,:),[0]); %#ok<*ASGLU>
     % % If the true dynamics were double integrator, this needs to be uncommented
@@ -75,28 +76,66 @@ for aa = 1:Na
 %     wHat(aa,:) = uLast(:)
 
     % Quick and dirty safety solution
-    As = zeros(factorial(Ns),Nua+Ns);
-    bs = zeros(factorial(Ns));
-    row = 0;
+    As = zeros(factorial(Ns)+1,Nua+Ns);
+    bs = zeros(factorial(Ns)+1,1);
+    
+    if x(aa,1) < -3 && x(aa,2) < 0
+        % A7
+        B   = -(x(aa,2)^2 + 3*x(aa,2));
+        LfB = -3;
+        LgB = [0 -2*x(aa,2)];
+    elseif x(aa,1) < 0 && x(aa,2) > 3
+        % A5
+        B   = -(x(aa,1)^2 + 3*x(aa,1));
+        LfB = -3;
+        LgB = [0 -2*x(aa,1)];
+    elseif x(aa,1) > 0 && x(aa,2) < -3
+        % A1
+        B   = -x(aa,1)^2 + 3*x(aa,1);
+        LfB = 3;
+        LgB = [0 -2*x(aa,1)];
+    elseif x(aa,1) > 3 && x(aa,2) > 0
+        % A3
+        B   = -x(aa,2)^2 + 3*x(aa,2);
+        LfB = 3;
+        LgB = [0 -2*x(aa,2)];
+    else
+        B   = 10;
+        LfB = 0;
+        LgB = [0 0];
+    end
+
+    row = 1;
+    As(row,aa*Nu+(-1:0)) = -LgB;
+    bs(row)              = LfB + 10*B;
+    cbf(row)             = B;
+    
     for bb = 1:Na
+        % Update fictitious disturbance j
+        wHat(aa,bb,:) = uLast(bb,bb*Nu+(-1:0)) - uLast(aa,bb*Nu+(-1:0));
+        
         for cc = bb+1:Na
             row = row + 1;
-            % Update Fictitious disturbances
-            wHat(aa,bb,:) = uLast(bb,bb,:) - uLast(aa,bb,:);
-            wHat(aa,cc,:) = uLast(cc,cc,:) - uLast(aa,cc,:);
+            
+            % Update fictitious disturbance k
+            wHat(aa,cc,:) = uLast(cc,cc*Nu+(-1:0)) - uLast(aa,cc*Nu+(-1:0));
             
             % Update Safety terms
             LfB = 0;
             LgB = 2 * (x(bb,:) - x(cc,:));
-            LwB = -LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
+            LwB = LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
             
             % Update safety matrix
+            B = (x(bb,:) - x(cc,:))*(x(bb,:) - x(cc,:))' - R^2;
             newrow = zeros(Nua+Ns,1);
             newrow((bb-1)*Nu+(1:Nu)) = -LgB;
             newrow((cc-1)*Nu+(1:Nu)) =  LgB;
-            newcol = LwB + 50*((x(bb,:) - x(cc,:))*(x(bb,:) - x(cc,:))' - R^2);
+            newcol = LwB + B^3;
             As(row,:) = newrow;
             bs(row)   = newcol;
+            
+            % Update logging var
+            cbf(row) = B;
         end
     end
             
@@ -164,6 +203,7 @@ for aa = 1:Na
     
     u(aa,:)     = sol(aa*Nu+(-1:0));
     uLast(aa,:) = sol(1:Nua);
+    mincbf(aa)  = min(cbf);
 %     d(aa,:) = sol(Nua+1:end);
 %     u_nom(aa,:) = u_0;
 end
@@ -171,7 +211,8 @@ end
 % Configure relevant variables for logging
 % u_nom = permute(reshape(u_nom,[1 Na Nua]),[1 2 3]);
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);
-data = struct('uLast',uLast);
+cbf   = min(mincbf);
+data = struct('uLast',uLast,'cbf',cbf);
 
 
 end

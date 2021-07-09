@@ -12,10 +12,23 @@ x_goal = [-5  0;
            0  5];
        
 % Two Vehicles -- One crossing straight through, one turning left
+N                = 10;
 x0           = [ 1.5 -13.0;
-                -1.5  13.0];
-xGoal(1,:,:) = [ 1.5 -3.0; -3.0  1.5; -13.0   1.5];
-xGoal(2,:,:) = [-1.5  3.0; -1.5 -3.0; - 1.5 -13.0];
+                -1.5  13.0;
+                13.0   1.5];
+
+xGoal(1,1,:)     = [ 1.5  -3.0];
+xGoal(1,2:N+1,:) = get_waypoints(N,squeeze(xGoal(1,1,:)),2); % Left Turn
+xGoal(1,N+2,:)   = [-13.0  1.5];
+
+xGoal(2,1,:)     = [-1.5   3.0];
+% xGoal(2,2:N+1,:) = get_waypoints(N,squeeze(xGoal(2,1,:)),1); % Straight (No Turn)
+xGoal(2,2,:)     = [-1.5 -13.0];
+
+xGoal(3,1,:)     = [  3.0  1.5];
+% xGoal(2,2:N+1,:) = get_waypoints(N,squeeze(xGoal(2,1,:)),1); % Straight (No Turn)
+xGoal(3,2,:)     = [-13.0  1.5];
+
 gidx         = ones(size(x0,1),1);
 xg           = zeros(size(x0));
 

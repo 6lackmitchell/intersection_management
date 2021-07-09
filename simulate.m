@@ -37,6 +37,7 @@ thetaHat = zeros(nTimesteps,nAgents,nCBFs);
 
 % Safety and Performance Logging Variables
 safety      = zeros(nTimesteps,nAgents,nCBFs);
+safety      = zeros(nTimesteps,nAgents);
 performance = zeros(nTimesteps,nAgents,1);
 
 % Define Controller
@@ -84,6 +85,7 @@ for ii = 1:nTimesteps
     % Compute control input
     [u(ii,:,:),data]  = controller(t,xx,settings);
     uLast = data.uLast;
+    safety(ii,:) = data.cbf;
 
     % Update Dynamics
     [xdot,f,g]    = dynamics(dyn_mode,t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)));
@@ -95,6 +97,10 @@ beep
 %% Plot Simulation Results
 % filename = 'datastore/single_integrator/four_ellipses_distributed.mat';
 % load(filename)
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_3car_intersection.mat');
+tf = 2.5;
+ii = tf / dt;
+
 lw = 3.0;
 tt = linspace(dt,ii*dt,ii);
 edge_SEvx =  3.0*ones(ii,1);
@@ -163,37 +169,45 @@ obstacles = [struct('x',edge_SEvx,'y',edge_SEvy,'color','k'),
 % hold off
 
 figure(2);
-title('Control Inputs')
-hold on
-for jj = 1:1%nAgents
-    plot(tt,u(1:ii,jj,1),'LineWidth',lw)
-    plot(tt,u_nom(1:ii,jj,1),'LineWidth',lw)
-end
-legend('A1','A1_{nom}','A2','A2_nom')
-hold off
-
-% figure(2);
-% title('CBFs')
-% hold on
-% for ii = 1:nAgents
-%     plot(tt,safety(:,ii,1),'LineWidth',lw)
-%     plot(tt,safety(:,ii,2),'LineWidth',lw)
-% end
-% hold off
-% 
-figure(3);
-title('CLFs')
+title('Control Inputs X')
 hold on
 for jj = 1:nAgents
-    plot(performance(1:ii,jj,1),'LineWidth',lw)
+    plot(tt,u(1:ii,jj,1),'LineWidth',lw)
+%     plot(tt,u_nom(1:ii,jj,1),'LineWidth',lw)
 end
+legend('A1','A2','A3')
 hold off
 
+figure(3);
+title('Control Inputs Y')
+hold on
+for jj = 1:nAgents
+    plot(tt,u(1:ii,jj,2),'LineWidth',lw)
+%     plot(tt,u_nom(1:ii,jj,1),'LineWidth',lw)
+end
+legend('A1','A2','A3')
+hold off
+
+figure(4);
+title('CBFs')
+hold on
+for jj = 1:nAgents
+    plot(tt,safety(1:ii,jj),'LineWidth',lw)
+end
+hold off
+% 
+% figure(3);
+% title('CLFs')
+% hold on
+% for jj = 1:nAgents
+%     plot(performance(1:ii,jj,1),'LineWidth',lw)
+% end
+% hold off
+
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/',con_mode,'_four_ellipses_TEST2.mat');
 save(filename)
 
 %% Create Movie
 % obstacles = [struct('x',ell1x,'y',ell1y),struct('x',ell2x,'y',ell2y),struct('x',ell3x,'y',ell3y),struct('x',ell4x,'y',ell4y)];
 moviename = erase(filename,'.mat');
-cinematographer(x(1:ii,:,:),obstacles,moviename)
+cinematographer(x(1:(ii),:,:),obstacles,moviename)

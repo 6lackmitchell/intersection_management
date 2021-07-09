@@ -1,8 +1,9 @@
 function cinematographer(x,obstacles,filename)
 
 
-color = ['b','g','y','m'];
+color = ['b','g','m','p'];
 lw    = 3.0;
+mksz  = 12.0;
 maxsteps = size(x,1);
 nAgents = size(x,2);
 maxXdim = 13;
@@ -32,7 +33,7 @@ for oo = 1:length(obstacles)
     plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
 end
 for ii=1:1:nAgents
-    plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw);
+    plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
     axis([-maxXdim maxXdim -maxYdim maxYdim]);
 end
 hold off
@@ -59,7 +60,7 @@ for tt=1:10:maxsteps
         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
     end
     for ii=1:1:nAgents
-        plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw);
+        plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
         axis([-maxXdim maxXdim -maxYdim maxYdim]);
     end
     

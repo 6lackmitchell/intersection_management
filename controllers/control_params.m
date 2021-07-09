@@ -17,7 +17,7 @@ u_max = 10.0;
 Tc = 0.25;
 
 % Safe Distance
-R = 1.0;
+R = 2.0;
 
 % N-values
 Nu = 2;
