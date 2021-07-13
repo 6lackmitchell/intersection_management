@@ -16,8 +16,15 @@ for ff = 1:length(folders)
 end
 
 %% Initialize Simulation Parameters
+
+% Define Dynamics and Controller modes
+dyn_mode       = "kinematic_bicycle";
+% dyn_mode       = "double_integrator";
+con_mode       = "centralized";
+con_mode       = "distributed";
+
 run('settings/timing.m')
-run('settings/kinematic_bicycle_env.m')
+run(strcat('settings/',dyn_mode,'_env.m'))
 run('controllers/setup.m')
 
 % State Logging Variables
@@ -44,16 +51,13 @@ performance = zeros(nTimesteps,nAgents,1);
 controller = @centralized_pcca;
 controller = @distributed_pcca;
 
-% Define Dynamics and Controller modes
-dyn_mode       = "kinematic_bicycle";
-% dyn_mode       = "double_integrator";
-con_mode       = "centralized";
-con_mode       = "distributed";
-
 % Specify initial conditions
 for aa = 1:nAgents
     x(1,aa,:) = x0(aa,1:nStates);
 end
+
+% Reservation-based Objects
+tSlots = inf*ones(nAgents,2);
 
 %% Execute Simulation
 for ii = 1:nTimesteps
@@ -80,12 +84,16 @@ for ii = 1:nTimesteps
         break
     end
     
-    settings          = struct('dynamics',@dynamics,'xGoal',xg,'uLast',uLast);
+    settings          = struct('dynamics', @dynamics,...
+                               'xGoal',    xg,       ...
+                               'uLast',    uLast,    ...
+                               'tSlots',   tSlots);
     
     % Compute control input
     [u(ii,:,:),data]  = controller(t,xx,settings);
-    uLast = data.uLast;
-    safety(ii,:) = data.cbf;
+    uLast             = data.uLast;
+    safety(ii,:)      = data.cbf;
+    tSlots            = data.tSlots;
 
     % Update Dynamics
     [xdot,f,g]    = dynamics(dyn_mode,t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)));
