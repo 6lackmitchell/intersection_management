@@ -17,7 +17,7 @@ end
 
 %% Initialize Simulation Parameters
 run('settings/timing.m')
-run('settings/environment.m')
+run('settings/kinematic_bicycle_env.m')
 run('controllers/setup.m')
 
 % State Logging Variables
@@ -45,7 +45,7 @@ controller = @centralized_pcca;
 controller = @distributed_pcca;
 
 % Define Dynamics and Controller modes
-dyn_mode       = "single_integrator";
+dyn_mode       = "kinematic_bicycle";
 % dyn_mode       = "double_integrator";
 con_mode       = "centralized";
 con_mode       = "distributed";
@@ -63,7 +63,7 @@ for ii = 1:nTimesteps
     % Update Settings
     quit_flags = zeros(nAgents,1);
     for aa = 1:size(xGoal,1)
-        addidx      = (norm(squeeze(xGoal(aa,gidx(aa),:) - x(ii,aa,:))) < tol);
+        addidx      = (norm(squeeze(xGoal(aa,gidx(aa),:) - x(ii,aa,1:2))) < tol);
         newidx      = gidx(aa) + addidx;
         if newidx > size(xGoal,2)
             quit_flags(aa) = 1;

@@ -50,14 +50,31 @@ wHat  = zeros(Na,Na,Nu);
 mincbf = zeros(Na);
 for aa = 1:Na
     [drift,f,g] = dynamics('single_integrator',t,x(aa,:),[0]); %#ok<*ASGLU>
-    % % If the true dynamics were double integrator, this needs to be uncommented
-    % [drift,f,g] = dynamics('double_integrator',t,x,[0]); %#ok<*ASGLU>
     
     % Compute nominal control input -- (they use LQR, we use FXT-CLF-QP)
     newidx      = aa*Nu+(-1:0);
     settings0   = struct('dyn',{f,g},'xg',xGoal(aa,:),'cost',cost,'uLast',uLast(aa,aa*Nu+(-1:0)));
-    u_0         = zeros(Nua,1);
-    u_0(newidx) = hl_fxt_clf_qp(t,x(aa,:),settings0);
+    v_0         = zeros(Nua,1);
+    v_0(newidx) = hl_fxt_clf_qp(t,x(aa,:),settings0);
+    
+    % % If the true dynamics were double integrator, this needs to be uncommented
+    [drift,f,g] = dynamics('kinematic_bicycle',t,x,[0]); %#ok<*ASGLU>
+    
+    T   = 0.5;
+    v_a = reshape([x(:,4).*cos(x(:,3)); x(:,4).*sin(x(:,3))],size(v_0));
+    acc = (v_0 - v_a) / T;
+    
+    M1  = [cos(x(1,3)) -x(1,4)*sin(x(1,3)); sin(x(1,3)) x(1,4)*cos(x(1,3))];
+    M2  = [cos(x(2,3)) -x(2,4)*sin(x(2,3)); sin(x(2,3)) x(2,4)*cos(x(2,3))];
+    M3  = [cos(x(3,3)) -x(3,4)*sin(x(3,3)); sin(x(3,3)) x(3,4)*cos(x(3,3))];
+    M   = [M1 zeros(size(M1)) zeros(size(M1));
+           zeros(size(M1)) M2 zeros(size(M1));
+           zeros(size(M1)) zeros(size(M1)) M3];
+    if rank(M) == size(M,1)
+        u_0 = M \ acc;
+    else
+        u_0 = lsqminnorm(M,acc);
+    end
 
     % Load Optimization Cost Fcn
     q = ones(Nua+Ns,1);
@@ -66,7 +83,9 @@ for aa = 1:Na
     % Control Constraints
     Ac  = kron(eye(Nua),[1; -1]);
     Ac  = [Ac zeros(2*Nua,Ns)];
-    bc  = u_max*ones(2*Nua,1);
+%     bc  = u_max*ones(2*Nua,1);
+    bc  = [tau_max; tau_max; acc_max; acc_max];
+    bc  = [bc; bc; bc];
 
     % Class K Functions -- alpha(B) = a*B
     Ak  = [zeros(Ns,Nu) -eye(Ns)];
@@ -75,69 +94,69 @@ for aa = 1:Na
     % Update fictitious disturbances
 %     wHat(aa,:) = uLast(:)
 
-    % Quick and dirty safety solution
-    As = zeros(factorial(Ns)+1,Nua+Ns);
-    bs = zeros(factorial(Ns)+1,1);
-    
-    if x(aa,1) < -3 && x(aa,2) < 0
-        % A7
-        B   = -(x(aa,2)^2 + 3*x(aa,2));
-        LfB = -3;
-        LgB = [0 -2*x(aa,2)];
-    elseif x(aa,1) < 0 && x(aa,2) > 3
-        % A5
-        B   = -(x(aa,1)^2 + 3*x(aa,1));
-        LfB = -3;
-        LgB = [0 -2*x(aa,1)];
-    elseif x(aa,1) > 0 && x(aa,2) < -3
-        % A1
-        B   = -x(aa,1)^2 + 3*x(aa,1);
-        LfB = 3;
-        LgB = [0 -2*x(aa,1)];
-    elseif x(aa,1) > 3 && x(aa,2) > 0
-        % A3
-        B   = -x(aa,2)^2 + 3*x(aa,2);
-        LfB = 3;
-        LgB = [0 -2*x(aa,2)];
-    else
-        B   = 10;
-        LfB = 0;
-        LgB = [0 0];
-    end
-
-    row = 1;
-    As(row,aa*Nu+(-1:0)) = -LgB;
-    bs(row)              = LfB + 10*B;
-    cbf(row)             = B;
-    
-    for bb = 1:Na
-        % Update fictitious disturbance j
-        wHat(aa,bb,:) = uLast(bb,bb*Nu+(-1:0)) - uLast(aa,bb*Nu+(-1:0));
-        
-        for cc = bb+1:Na
-            row = row + 1;
-            
-            % Update fictitious disturbance k
-            wHat(aa,cc,:) = uLast(cc,cc*Nu+(-1:0)) - uLast(aa,cc*Nu+(-1:0));
-            
-            % Update Safety terms
-            LfB = 0;
-            LgB = 2 * (x(bb,:) - x(cc,:));
-            LwB = LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
-            
-            % Update safety matrix
-            B = (x(bb,:) - x(cc,:))*(x(bb,:) - x(cc,:))' - R^2;
-            newrow = zeros(Nua+Ns,1);
-            newrow((bb-1)*Nu+(1:Nu)) = -LgB;
-            newrow((cc-1)*Nu+(1:Nu)) =  LgB;
-            newcol = LwB + B^3;
-            As(row,:) = newrow;
-            bs(row)   = newcol;
-            
-            % Update logging var
-            cbf(row) = B;
-        end
-    end
+%     % Quick and dirty safety solution
+%     As = zeros(factorial(Ns)+1,Nua+Ns);
+%     bs = zeros(factorial(Ns)+1,1);
+%     
+%     if x(aa,1) < -3 && x(aa,2) < 0
+%         % A7
+%         B   = -(x(aa,2)^2 + 3*x(aa,2));
+%         LfB = -3;
+%         LgB = [0 -2*x(aa,2)];
+%     elseif x(aa,1) < 0 && x(aa,2) > 3
+%         % A5
+%         B   = -(x(aa,1)^2 + 3*x(aa,1));
+%         LfB = -3;
+%         LgB = [0 -2*x(aa,1)];
+%     elseif x(aa,1) > 0 && x(aa,2) < -3
+%         % A1
+%         B   = -x(aa,1)^2 + 3*x(aa,1);
+%         LfB = 3;
+%         LgB = [0 -2*x(aa,1)];
+%     elseif x(aa,1) > 3 && x(aa,2) > 0
+%         % A3
+%         B   = -x(aa,2)^2 + 3*x(aa,2);
+%         LfB = 3;
+%         LgB = [0 -2*x(aa,2)];
+%     else
+%         B   = 10;
+%         LfB = 0;
+%         LgB = [0 0];
+%     end
+% 
+%     row = 1;
+%     As(row,aa*Nu+(-1:0)) = -LgB;
+%     bs(row)              = LfB + 10*B;
+%     cbf(row)             = B;
+%     
+%     for bb = 1:Na
+%         % Update fictitious disturbance j
+%         wHat(aa,bb,:) = uLast(bb,bb*Nu+(-1:0)) - uLast(aa,bb*Nu+(-1:0));
+%         
+%         for cc = bb+1:Na
+%             row = row + 1;
+%             
+%             % Update fictitious disturbance k
+%             wHat(aa,cc,:) = uLast(cc,cc*Nu+(-1:0)) - uLast(aa,cc*Nu+(-1:0));
+%             
+%             % Update Safety terms
+%             LfB = 0;
+%             LgB = 2 * (x(bb,:) - x(cc,:));
+%             LwB = LgB * squeeze(wHat(aa,bb,:) - wHat(aa,cc,:));
+%             
+%             % Update safety matrix
+%             B = (x(bb,:) - x(cc,:))*(x(bb,:) - x(cc,:))' - R^2;
+%             newrow = zeros(Nua+Ns,1);
+%             newrow((bb-1)*Nu+(1:Nu)) = -LgB;
+%             newrow((cc-1)*Nu+(1:Nu)) =  LgB;
+%             newcol = LwB + B^3;
+%             As(row,:) = newrow;
+%             bs(row)   = newcol;
+%             
+%             % Update logging var
+%             cbf(row) = B;
+%         end
+%     end
             
         
             
@@ -186,10 +205,10 @@ for aa = 1:Na
     % Constraint Matrix
     % A = [Ac; Ak; As];
     % b = [bc; bk; bs];
-    A = [Ac; As];
-    b = [bc; bs];
-%     A = [Ac];
-%     b = [bc];
+%     A = [Ac; As];
+%     b = [bc; bs];
+    A = [Ac];
+    b = [bc];
     % A = [];
     % b = [];
 
@@ -203,7 +222,7 @@ for aa = 1:Na
     
     u(aa,:)     = sol(aa*Nu+(-1:0));
     uLast(aa,:) = sol(1:Nua);
-    mincbf(aa)  = min(cbf);
+    mincbf(aa)  = 0;%min(cbf);
 %     d(aa,:) = sol(Nua+1:end);
 %     u_nom(aa,:) = u_0;
 end

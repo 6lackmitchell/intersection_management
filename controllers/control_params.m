@@ -2,7 +2,7 @@
 % cwd = pwd;
 % run(strcat(cwd,'../settings/environment.m'))
 % run('../settings/environment.m')
-run('environment.m')
+run('kinematic_bicycle_env.m')
 % run('cbfs.m')
 % run('clfs.m')
 
@@ -11,7 +11,8 @@ run('environment.m')
 [B,dBdx] = cbfs();
 
 % Control Constraint
-u_max = 10.0;
+tau_max = pi / 4;
+acc_max = 2 * 9.81;
 
 % Tracking Control Params
 Tc = 0.25;
