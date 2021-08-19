@@ -35,15 +35,22 @@ Na    = size(x,1);
 xGoal = settings.xg;
 [f,g] = settings.dyn;
 cost  = settings.cost;
+turn  = settings.turning;
 uLast = settings.uLast;
 Nu    = size(uLast,2);
 Nua   = Nu*Na;
+
+if turn
+    c1 = c1*10;
+    c2 = c2*10;
+end
 
 % Load Optimization Cost Fcn
 min_norm_control = zeros(Nua,1);
 min_deviation_control = reshape(uLast,[Nua 1]);
 const_speed_control = 10*(xGoal(1,1:2) - x(1,1:2))/norm(xGoal(1,1:2) - x(1,1:2));
 model_control = const_speed_control';
+model_control = min_norm_control;
 q = ones(Nua,1);
 [Q,p] = cost(model_control,q,Nua,0,0);
 
@@ -55,6 +62,8 @@ for aa = 1:Na
     xd = x(aa,:);
     
     % Performance Condition: CLF Derivatives
+    ff = f(t,xx);
+    dd = dVdx(t,xx-xg,xd,aa);
     LfV = dVdx(t,xx-xg,xd,aa) * f(t,xx);
     LgV = dVdx(t,xx-xg,xd,aa) * g(t,xx);
     FV  = -c1*V(t,xx-xg,xd,aa)^e1 - c2*V(t,xx-xg,xd,aa)^e2;

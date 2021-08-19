@@ -28,6 +28,7 @@ function [xdot,f,g] = dynamics(mode,t,x,u)
 % Website: http://www.blackmitchell.com
 % May 2021; Last revision: 29-May-2021
 %------------- BEGIN CODE --------------
+addpath(mode)
 dynamic_mode = str2func(mode);
 [f,g] = dynamic_mode();
 

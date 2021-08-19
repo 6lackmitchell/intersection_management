@@ -26,15 +26,14 @@ Np = 0;
 Ns = 0;%4 + (nAgents-1);
 
 % QP Control Parameters
+q = ones(Nu+Ns,1);
 q = [1 / tau_max^2; 1 / acc_max^2];
-q = repmat(q,3,1);
-% q = [q; ones(Ns,1)];
 
 % FxTS Parameters
-Gamma = [1 0; 0 1];
+c1 = 1;
+c2 = 1;
 e1 = 0.5;
 e2 = 1.5;
-c1 = 1;
 
 % Ellipses
 cx1 = 1;   cx2 =  2;  cx3 =  -1; cx4 = -2;
