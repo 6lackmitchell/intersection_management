@@ -1,9 +1,14 @@
 %% Framework Setup
-clc; clear; close all;
+clc; clear; close all; restoredefaultpath;
 %#ok<*NASGU>
 
+% Define Dynamics and Controller modes
+dyn_mode       = "kinematic_bicycle_rdrive";
+con_mode       = "rdrive";
+cost_mode      = "costs";
+
 % Add Desired Paths
-folders = {'controllers','datastore','dynamics','settings'};
+folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
     d = dir(folders{ff});
@@ -11,19 +16,25 @@ for ff = 1:length(folders)
     subFolders = {d(isub).name}';
     subFolders(ismember(subFolders,{'.','..'})) = [];
     for fff = 1:length(subFolders)
-        addpath(strcat(folders{ff},'/',subFolders{fff}));
+        if strcmp(subFolders{fff},dyn_mode) || strcmp(subFolders{fff},con_mode) || strcmp(subFolders{fff},cost_mode)
+            addpath(strcat(folders{ff},'/',subFolders{fff}));
+            d = dir(subFolders{fff});
+            isubsub = [d(:).isdir]; %# returns logical vector
+            subsubFolders = {d(isubsub).name}';
+            subsubFolders(ismember(subsubFolders,{'.','..'})) = [];
+            for ffff = 1:length(subsubFolders)
+                addpath(strcat(folders{ff},'/',subFolders{fff},'/',subsubFolders{ffff}));
+            end
+        end
     end
 end
 
 %% Initialize Simulation Parameters
 
-% Define Dynamics and Controller modes
-dyn_mode       = "kinematic_bicycle_rdrive";
-con_mode       = "queue_control";
-
+% Load settings into workspace
 run('settings/timing.m')
-run(strcat('settings/',dyn_mode,'/initial_conditions.m'))
-run(strcat('settings/',con_mode,'/control_params.m'))
+run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
+run(strcat('controllers/',con_mode,'/control_params.m'))
 
 % State Logging Variables
 x     = zeros(nTimesteps,nAgents,nStates);
@@ -32,16 +43,16 @@ xErr  = zeros(nTimesteps,nAgents,nStates);
 
 % Control Logging Variables
 u        = zeros(nTimesteps,nAgents,nControls);
-v        = zeros(nTimesteps,nAgents,nCBFs);
+% v        = zeros(nTimesteps,nAgents,nCBFs);
 uNom     = zeros(nTimesteps,nAgents,nControls);
 uLast    = zeros(nAgents,nControls);
-uLast    = zeros(nAgents,nControls*nAgents);
+% uLast    = zeros(nAgents,nControls*nAgents);
 
-thetaHat = zeros(nTimesteps,nAgents,nCBFs);
+% thetaHat = zeros(nTimesteps,nAgents,nCBFs);
 
 % Safety and Performance Logging Variables
-safety      = zeros(nTimesteps,nAgents,nCBFs);
-safety      = zeros(nTimesteps,nAgents);
+% safety      = zeros(nTimesteps,nAgents,nCBFs);
+% safety      = zeros(nTimesteps,nAgents);
 performance = zeros(nTimesteps,nAgents,1);
 
 % Define Controller
@@ -58,7 +69,8 @@ tSlots = inf*ones(nAgents,2);
 % More Settings
 quit_flags = zeros(nAgents,1);
 t0         = zeros(nAgents,1);
-xS         = zeros(nAgents,2);
+xS         = zeros(nAgents,2); % old
+% xS         = zeros(nAgents,3); % new
 th0        = zeros(nAgents,1);
 r          = zeros(nAgents,2);
 rdot       = zeros(nAgents,2);
@@ -70,6 +82,10 @@ Tfxt       = ones(nAgents,1);
 for ii = 1:nTimesteps
     t                 = ii *  dt;
     xx                = squeeze(x(ii,:,:));
+    
+    if mod(ii,1/dt) == 0
+        disp(t)
+    end
     
     % Update Settings
     for aa = 1:nAgents
@@ -85,10 +101,11 @@ for ii = 1:nTimesteps
         
         if old_gidx ~= gidx(aa) || ii == 1
             t0(aa)      = t;
-            xS(aa,:)    = xx(aa,1:2);
+            xS(aa,:)    = xx(aa,1:2); % Old way
+%             xS(aa,:)    = xx(aa,1:3); % New way
             th0(aa)     = xx(aa,3);
         end
-        
+            
         settings = struct('T',    Tpath{aa}(gidx(aa)),...
                           't0',   t0(aa),                   ...
                           'xS',   xS(aa,:),                   ...
@@ -116,7 +133,8 @@ for ii = 1:nTimesteps
                                'Tfxt',     Tfxt,     ...
                                'r',        r,        ...
                                'rdot',     rdot,     ...
-                               'rddot',    rddot);
+                               'rddot',    rddot,    ...
+                               't0',       t0);
     try
         % Compute control input
         data         = controller(t,xx,settings);
@@ -139,48 +157,52 @@ for ii = 1:nTimesteps
     [xdot,f,g]    = dynamics(dyn_mode,t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)));
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
     
+    % Restrict Angles to between -pi and pi
+    x(ii + 1,:,3) = wrapToPi(x(ii + 1,:,3));
+    
 end
 beep
 
 %% Plot Simulation Results
 % filename = 'datastore/single_integrator/four_ellipses_distributed.mat';
 % load(filename)
-filename = strcat('datastore/',dyn_mode,'/',con_mode,'_4car_intersection.mat');
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
 % tf = 2.5;
-ii = t / dt;
+ii = fix(t / dt);
 
 lw = 3.0;
+far = 25.0;
 tt = linspace(dt,ii*dt,ii);
-edge_SEvx =  3.0*ones(ii,1);
-edge_SEvy = linspace(-13.0,-3.0,ii);
-edge_SEhx = linspace(3.0,13.0,ii);
-edge_SEhy = -3.0*ones(ii,1);
+edge_SEvx =  lw*ones(ii,1);
+edge_SEvy = linspace(-far,-lw,ii);
+edge_SEhx = linspace(lw,far,ii);
+edge_SEhy = -lw*ones(ii,1);
 
-edge_SWvx = -3.0*ones(ii,1);
-edge_SWvy = linspace(-13.0,-3.0,ii);
-edge_SWhx = linspace(-13.0,-3.0,ii);
-edge_SWhy = -3.0*ones(ii,1);
+edge_SWvx = -lw*ones(ii,1);
+edge_SWvy = linspace(-far,-lw,ii);
+edge_SWhx = linspace(-far,-lw,ii);
+edge_SWhy = -lw*ones(ii,1);
 
-edge_NEvx =  3.0*ones(ii,1);
-edge_NEvy = linspace(3.0,13.0,ii);
-edge_NEhx = linspace(3.0,13.0,ii);
-edge_NEhy =  3.0*ones(ii,1);
+edge_NEvx =  lw*ones(ii,1);
+edge_NEvy = linspace(lw,far,ii);
+edge_NEhx = linspace(lw,far,ii);
+edge_NEhy =  lw*ones(ii,1);
 
-edge_NWvx = -3.0*ones(ii,1);
-edge_NWvy = linspace(3.0,13.0,ii);
-edge_NWhx = linspace(-13.0,-3.0,ii);
-edge_NWhy =  3.0*ones(ii,1);
+edge_NWvx = -lw*ones(ii,1);
+edge_NWvy = linspace(lw,far,ii);
+edge_NWhx = linspace(-far,-lw,ii);
+edge_NWhy =  lw*ones(ii,1);
 
 center_Sx =  0.0*ones(ii,1);
-center_Sy = linspace(-13.0,-3.0,ii);
+center_Sy = linspace(-far,-lw,ii);
 
 center_Nx =  0.0*ones(ii,1);
-center_Ny = linspace(3.0,13.0,ii);
+center_Ny = linspace(lw,far,ii);
 
-center_Ex = linspace(3.0,13.0,ii);
+center_Ex = linspace(lw,far,ii);
 center_Ey = 0.0*ones(ii,1);
 
-center_Wx = linspace(-13.0,-3.0,ii);
+center_Wx = linspace(-far,-lw,ii);
 center_Wy = 0.0*ones(ii,1);
 
 obstacles = [struct('x',edge_SEvx,'y',edge_SEvy,'color','k'),
@@ -221,7 +243,7 @@ title('Control Inputs X')
 hold on
 for jj = 1:nAgents
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
-    plot(tt,uNom(1:ii,jj,1),'LineWidth',lw)
+    plot(tt,atan(uNom(1:ii,jj,1)),'LineWidth',lw)
 end
 legend('\omega_1','\omega_{1,nom}','\omega_2','\omega_{2,nom}','\omega_3','\omega_{3,nom}')
 hold off
@@ -238,13 +260,13 @@ end
 legend('a_1','a_{1,nom}','a_2','a_{2,nom}','a_3','a_{3,nom}')
 hold off
 
-figure(4);
-title('CBFs')
-hold on
-for jj = 1:nAgents
-    plot(tt,safety(1:ii,jj),'LineWidth',lw)
-end
-hold off
+% figure(4);
+% title('CBFs')
+% hold on
+% for jj = 1:nAgents
+%     plot(tt,safety(1:ii,jj),'LineWidth',lw)
+% end
+% hold off
 % 
 % figure(3);
 % title('CLFs')

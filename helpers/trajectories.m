@@ -53,13 +53,12 @@ if strcmp(path,'linear')
     
 elseif contains(path,'circular')
     
-    
     if contains(path,'left')
-        x0   = xS + [-R*sin(th0) R*cos(th0)];
+        x0   = xS(1:2) + [-R*sin(th0) R*cos(th0)];
         phi0 = th0 - (pi / 2);
         phif = th0;
     elseif contains(path,'right')
-        x0 = xS + [R*sin(th0) -R*cos(th0)];
+        x0 = xS(1:2) + [R*sin(th0) -R*cos(th0)];
         phi0 = th0 + (pi / 2);
         phif = th0;
     end
@@ -67,7 +66,7 @@ elseif contains(path,'circular')
     thdot  = (phif - phi0) / T;
     thddot = 0;
     th     = phif * tau + phi0 * (1 - tau);
-    r      = x0 + [R*cos(th) R*sin(th)];
+    r      = x0+[R*cos(th) R*sin(th)];
     rdot   = [-R*thdot*sin(th) R*thdot*cos(th)];
     rddot  = [-R*(thddot*sin(th) + thdot^2*cos(th));
                R*(thddot*cos(th) - thdot^2*sin(th))]';

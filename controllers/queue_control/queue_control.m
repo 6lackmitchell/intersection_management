@@ -30,7 +30,7 @@ function [data] = queue_control(t,x,settings)
 %------------- BEGIN CODE --------------
 % Import control parameters
 uMode    = settings.uMode;
-run(strcat(uMode,'_params.m'))
+run('control_params.m')
 
 % Deconstruct Settings
 dynamics = settings.dynamics;
@@ -59,17 +59,8 @@ tSlots = assign_tslots(t,x,tSlots);
 for aa = 1:Na
     [drift,f,g] = dynamics('single_integrator',t,x(aa,:),[0]); %#ok<*ASGLU>
     newidx      = aa*Nu+(-1:0);
-
-%     % Nominal FXT-CLF-QP Controller
-%     settings0   = struct('dyn',   {f,g},       ...
-%                          'xg',    xGoal(aa,:), ...
-%                          'cost',  cost,        ...
-%                          'turning',(aa==1 && x(1,2) > -3 && x(1,1) > -3),...
-%                          'uLast', uLast(aa,aa*Nu+(-1:0)));
-%     v_0         = zeros(Nua,1);
-%     v_0(newidx) = hl_fxt_clf_qp(t,x(aa,1:2),settings0);
     
-    % Nominal Analytical FxT Controller
+    % Configure path settings for nominal controller
     r           = settings.r;
     rdot        = settings.rdot;
     rddot       = settings.rddot;
@@ -81,47 +72,16 @@ for aa = 1:Na
                          'rdot',  rdot(aa,:),    ...
                          'rddot', rddot(aa,:),   ...
                          'cost',  cost);
-%     v_0         = zeros(Nua,1);
-%     v_0(newidx) = analytical_fxt(t,x(aa,1:2),settings0);
-    acc         = zeros(Nua,1);
-    acc(newidx) = path_following_fxt_clf_qp(t,x(aa,:),settings0);
     
-%     % True Dynamics
-%     [drift,f,g] = dynamics('kinematic_bicycle',t,x,[0]); %#ok<*ASGLU>
+    % FxT Path Following Controller
+    uu = path_following_fxt_clf_qp(t,x(aa,:),settings0);
+    vv = norm([uu(1) uu(2)]);
+    u_00 = [vv uu(3)];
     
-%     T   = 0.25;
-%     v_a = reshape([x(:,4).*cos(x(:,3)) x(:,4).*sin(x(:,3))]',size(v_0));
-%     acc = (v_0 - v_a) / T;
-
-    
-    
-%     dx  = x(aa,1:2) - r(aa,:);
-%     dvx = v_a - v_0;
-%     acc = zeros(6,1);
-%     acc1 = -2 * dvx(newidx)' / T - dx / T^2;
-%     acc(newidx) = -2 * dvx(newidx)' / T - dx / T^2;
-    
-%     M = zeros(Nu,Nu);
-    M = [-x(aa,4)*sin(x(aa,3)) cos(x(aa,3)); x(aa,4)*cos(x(aa,3)) sin(x(aa,3))];
-    th = round(x(aa,3),2);
-    M = [-x(aa,4)*sin(th) cos(th); x(aa,4)*cos(th) sin(th)];
-%     M1  = [-x(1,4)*sin(x(1,3)) cos(x(1,3)); x(1,4)*cos(x(1,3)) sin(x(1,3))];
-%     M2  = [-x(2,4)*sin(x(2,3)) cos(x(2,3)); x(2,4)*cos(x(2,3)) sin(x(2,3))];
-%     M3  = [-x(3,4)*sin(x(3,3)) cos(x(3,3)); x(3,4)*cos(x(3,3)) sin(x(3,3))];
-%     M   = [           M1   zeros(size(M2)) zeros(size(M3));
-%            zeros(size(M1))            M2   zeros(size(M3));
-%            zeros(size(M1)) zeros(size(M2))            M3];
-    if rank(M) == size(M,1)
-        u_00 = M \ acc(newidx);
-    else
-        u_00 = lsqminnorm(M,acc(newidx));
-    end
-    
-    u_0 = zeros(size(acc,1),1);
+    u_0 = zeros(Nua,1);
     u_0(newidx) = u_00;
 
     % Load Optimization Cost Fcn
-%     q = ones(Nua+Ns,1);
     q = repmat(q,Na,1);
     [Q,p] = cost(u_0,q,Nua,0,Ns);
 
@@ -129,22 +89,20 @@ for aa = 1:Na
     Ac  = kron(eye(Nua),[1; -1]);
     Ac  = [Ac zeros(2*Nua,Ns)];
 %     bc  = u_max*ones(2*Nua,1);
-    bc  = repmat([tau_max; tau_max; acc_max; acc_max],Na,1);
+    bc  = repmat([umax(1); umax(1); umax(2); umax(2)],Na,1);
 
     % Class K Functions -- alpha(B) = a*B
     Ak  = [];
     bk  = [];
     
     % Safety Constraints
-    [As,bs] = get_safety_constraints(t,x,aa,tSlots,1);    
+    [As,bs] = get_safety_constraints_1(t,x,aa,tSlots,1);    
 
     % Constraint Matrix
     A = [Ac; Ak; As];
     b = [bc; bk; bs];
     
-    tau_max = pi / 4;
-    acc_max = 2 * 9.81;
-    sat_vec = repmat([tau_max; acc_max],Na,1);
+    sat_vec = repmat([umax(1); umax(2)],Na,1);
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b

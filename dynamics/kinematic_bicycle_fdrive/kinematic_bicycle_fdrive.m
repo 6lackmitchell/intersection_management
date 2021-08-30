@@ -63,10 +63,10 @@ function vec = f(t,x)
 % Website: http://www.blackmitchell.com
 % Aug 2021; Last revision: 19-Aug-2021
 %------------- BEGIN CODE --------------
-vec = [x(4)*cos(x(3));
-       x(4)*sin(x(3));
+vec = [0;
+       0;
        0; 
-       0];
+       0]; % No drift term
 
 end
 
@@ -98,15 +98,14 @@ function vec = g(t,x)
 % Author: Mitchell Black
 % Email: mblackjr@umich.edu
 % Website: http://www.blackmitchell.com
-% Aug 2021; Last revision: 23-Aug-2021
+% Aug 2021; Last revision: 20-Aug-2021
 %------------- BEGIN CODE --------------
-run('physical_params.m')
+l   = 2; % length between front and rear wheels
+vec = [cos(x(3))        0;
+       sin(x(3))        0;
+       0                1;
+       sin(x(3)-x(4))/l 0]; % Controls are vel and steering angular vel
 
-% Controls are tan(d) and acc
-vec = [-x(4)*sin(x(3))*Lr/(Lf+Lr)  0;
-        x(4)*cos(x(3))*Lr/(Lf+Lr)  0;
-        x(4)/(Lf+Lr)               0;
-        0                          1]; 
 end
 
 

@@ -1,4 +1,4 @@
-function [u] = path_following_fxt_clf_qp(t,x,settings)
+function [xdot,ydot] = path_following_fxt_clf_qp(t,x,settings)
 %path_following_fxt_clf_qp - Controller based on analytical FxT Formulation
 %This controller relies on Lyapunov analysis to design a control law in
 %order to drive the state of the system to the desired trajectory in
@@ -29,6 +29,8 @@ function [u] = path_following_fxt_clf_qp(t,x,settings)
 %------------- BEGIN CODE --------------
 % run('control_params.m')
 
+mode  = 'dynamic';
+
 Gamma = settings.Gamma;
 e1    = settings.e1;
 e2    = settings.e2;
@@ -38,18 +40,31 @@ rdot  = settings.rdot;
 rddot = settings.rddot;
 cost  = settings.cost;
 
-% State for double integrator dynamics
-x_di  = [x(1) x(2) x(4)*cos(x(3)) x(4)*sin(x(3))];
+if strcmp(mode,'kinematic')
+    newx  = x(1:2);
+    xi    = r;
+    xidot = rdot;
+    A     = [0 0; 0 0];
+    B     = [1 0; 0 1];
+    
+elseif strcmp(mode,'dynamic')
+    % State for double integrator dynamics
+    newx  = [x(1) x(2) x(4)*cos(x(3)) x(4)*sin(x(3))];
+    
+    xi    = [r rdot];
+    xidot = [rdot rddot];
+    A     = [0 0 1 0; 0 0 0 1; 0 0 0 0; 0 0 0 0];
+    B     = [0 0; 0 0; 1 0; 0 1];
+    
+end
+
 
 a     = 1;
 b     = (1 - e1) / ((T * a * (1 - e1))*(e2 - 1));
 
-xi    = [r rdot];
-A     = [0 0 1 0; 0 0 0 1; 0 0 0 0; 0 0 0 0];
-B     = [0 0; 0 0; 1 0; 0 1];
-V     = 1/2 * (xi - x_di) * (xi - x_di)';
-LfV   = (xi - x_di) * [rdot rddot]' - (xi - x_di)*(A*x_di');
-LgV   = -(xi - x_di) * B;
+V     = 1/2 * (xi - newx) * (xi - newx)';
+LfV   = (xi - newx) * xidot' - (xi - newx)*(A*newx');
+LgV   = -(xi - newx) * B;
 FV    = -a*V^e1 - b*V^e2;
 
 Av    = LgV;
@@ -67,7 +82,12 @@ if isempty(sol)
     Av
     bv
 end
-u   = sol(1:Nu);
+u   = sol(1:2);
+
+% Advance dynamics to obtain new velocity
+run('timing.m')
+xdot = newx(3) + u(1)*dt;
+ydot = newx(4) + u(2)*dt;
 
 end
 

@@ -6,8 +6,15 @@ lw    = 3.0;
 mksz  = 12.0;
 maxsteps = size(x,1);
 nAgents = size(x,2);
-maxXdim = 10;
-maxYdim = 10;
+maxXdim = 30;
+maxYdim = 30;
+
+% Plotting params
+theta = 0:0.2:2*pi;
+RR    = 0.6;
+
+% Physical Params
+L = 1;
 
 % Make the movie object
 mov = struct('cdata', [], 'colormap', []);
@@ -42,32 +49,23 @@ for oo = 1:length(obstacles)
     plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
 end
 for ii=1:1:nAgents
-    plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
-%     x_low  = x(1,ii,1) - markersize(1)/2; % Left edge of marker
-%     x_high = x(1,ii,1) + markersize(1)/2; % Right edge of marker
-%     y_low  = x(1,ii,2) - markersize(2)/2; %//Bottom edge of marker
-%     y_high = x(1,ii,2) + markersize(2)/2;%//Top edge of marker
-% 
-%     phi = x(1,ii,3);
-%     p0  = [x(1,ii,1); x(1,ii,2)];
-%     R   = [cos(phi) sin(phi); -sin(phi) cos(phi)];
-%     p1  = [x_high; y_low];
-%     p2  = [x_high; y_high];
-%     p3  = [x_low; y_high];
-%     p4  = [x_low; y_low];
-%     
-%     p11 = p0 + R * (p1 - p0);
-%     p22 = p0 + R * (p2 - p0);
-%     p33 = p0 + R * (p3 - p0);
-%     p44 = p0 + R * (p4 - p0);
-%     pp  = [p11 p22 p33 p44];
-%     
-%     x_low  = min(pp(1,:));
-%     x_high = max(pp(1,:));
-%     y_low  = min(pp(2,:));
-%     y_high = max(pp(2,:));
-%     
-%     imagesc([x_low x_high], [y_low y_high],imrotate(marker{ii},phi))
+    cx1 = x(1,ii,1) + L/2*cos(x(1,ii,3));
+    cy1 = x(1,ii,2) + L/2*sin(x(1,ii,3));
+    cx2 = x(1,ii,1) - L/2*cos(x(1,ii,3));
+    cy2 = x(1,ii,2) - L/2*sin(x(1,ii,3));
+
+    ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+    ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+
+%     plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
+    if ii < 4
+        mark = 'o';
+    else
+        mark = 'x';
+    end
+    plot(ox1, oy1, mark,'Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
+    plot(ox2, oy2, mark,'Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
+
 end
 txt = strcat('t = ',num2str(0.0),' sec');
 text(10,10,txt,'FontSize',14)
@@ -87,8 +85,8 @@ end
 
 % If the movie is going too slow, you can increase the "stride" value, e.g.
 %   put "for j = 1:10:maxsteps" or some other number in the middle.
-for tt=1:100:maxsteps
-    
+for tt=1:(1/(10*dt)):maxsteps
+
     clf
     set(gcf, 'Position', position)
     hold on
@@ -96,40 +94,32 @@ for tt=1:100:maxsteps
         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
     end
     for ii=1:1:nAgents
-        plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
-%         x_low  = x(tt,ii,1) - markersize(1)/2; % Left edge of marker
-%         x_high = x(tt,ii,1) + markersize(1)/2; % Right edge of marker
-%         y_low  = x(tt,ii,2) - markersize(2)/2; % Bottom edge of marker
-%         y_high = x(tt,ii,2) + markersize(2)/2; % Top edge of marker
-%         
-%         phi = x(tt,ii,3);
-%         p0  = [x(tt,ii,1); x(tt,ii,2)];
-%         R   = [cos(phi) sin(phi); -sin(phi) cos(phi)];
-%         p1  = [x_high; y_low];
-%         p2  = [x_high; y_high];
-%         p3  = [x_low; y_high];
-%         p4  = [x_low; y_low];
-% 
-%         p11 = p0 + R * (p1 - p0);
-%         p22 = p0 + R * (p2 - p0);
-%         p33 = p0 + R * (p3 - p0);
-%         p44 = p0 + R * (p4 - p0);
-%         pp  = [p11 p22 p33 p44];
-% 
-%         x_low  = min(pp(1,:));
-%         x_high = max(pp(1,:));
-%         y_low  = min(pp(2,:));
-%         y_high = max(pp(2,:));
-% 
-%         imagesc([x_low x_high], [y_low y_high],imrotate(marker{ii},phi))
-%         imagesc([x_low x_high], [y_low y_high],marker{ii})
+        cx1 = x(tt,ii,1) + L/2*cos(x(tt,ii,3));
+        cy1 = x(tt,ii,2) + L/2*sin(x(tt,ii,3));
+        cx2 = x(tt,ii,1) - L/2*cos(x(tt,ii,3));
+        cy2 = x(tt,ii,2) - L/2*sin(x(tt,ii,3));
+
+        if ii < 4
+            ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+            ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+        else
+            ox1 = cx1 + sqrt(2)*RR*wrapToPi(theta)/pi; oy1 = cy1 + sqrt(2)*RR*wrapToPi(theta)/pi;
+            ox2 = cx2 + sqrt(2)*RR*wrapToPi(theta)/pi; oy2 = cy2 + sqrt(2)*RR*wrapToPi(theta)/pi;
+        end
+
+
+        plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+        plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+
+    %     plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
+
     end
     txt = strcat('t = ',num2str(round(tt * dt,2)),' sec');
     text(10,10,txt,'FontSize',14)
     axis([-maxXdim maxXdim -maxYdim maxYdim]);
-    
+
     hold off
-    
+
     drawnow update
     mov= getframe(gcf);
     writeVideo(vidObj,mov)

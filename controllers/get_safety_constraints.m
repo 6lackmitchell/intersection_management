@@ -11,6 +11,10 @@ function [A,b] = get_safety_constraints(t,x,aa,tSlots,k)
 % A1    = [-LfLgB(1) -LfLgB(2) 0 0 0 0];
 % b1    = L2fB;
 
+A = [];
+b = [];
+return
+
 Nu = 2;
 Na = 6;
 
