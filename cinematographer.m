@@ -1,7 +1,7 @@
 function cinematographer(dt,x,obstacles,filename)
 
 
-color = ['b','g','m','k','r','y'];
+color = ['b','k','g','r','m','c'];
 lw    = 3.0;
 mksz  = 12.0;
 maxsteps = size(x,1);
@@ -57,14 +57,23 @@ for ii=1:1:nAgents
     ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
     ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
 
-%     plot(x(1,ii,1), x(1,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
     if ii < 4
-        mark = 'o';
+        ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+        ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
     else
-        mark = 'x';
+        ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
+        ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
+        ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
+        ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+        
+        ox1  = [ox1a ox1b];
+        oy1  = [oy1a oy1b];
+        ox2  = [ox2a ox2b];
+        oy2  = [oy2a oy2b];
     end
-    plot(ox1, oy1, mark,'Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
-    plot(ox2, oy2, mark,'Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
+    
+    plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
 
 end
 txt = strcat('t = ',num2str(0.0),' sec');
@@ -103,8 +112,18 @@ for tt=1:(1/(10*dt)):maxsteps
             ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
             ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
         else
-            ox1 = cx1 + sqrt(2)*RR*wrapToPi(theta)/pi; oy1 = cy1 + sqrt(2)*RR*wrapToPi(theta)/pi;
-            ox2 = cx2 + sqrt(2)*RR*wrapToPi(theta)/pi; oy2 = cy2 + sqrt(2)*RR*wrapToPi(theta)/pi;
+%             ox1 = cx1 + sqrt(2)*RR*wrapToPi(theta)/pi; oy1 = cy1 + sqrt(2)*RR*wrapToPi(theta)/pi;
+%             ox2 = cx2 + sqrt(2)*RR*wrapToPi(theta)/pi; oy2 = cy2 + sqrt(2)*RR*wrapToPi(theta)/pi;
+            
+            ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
+            ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
+            ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
+            ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+
+            ox1  = [ox1a ox1b];
+            oy1  = [oy1a oy1b];
+            ox2  = [ox2a ox2b];
+            oy2  = [oy2a oy2b];
         end
 
 

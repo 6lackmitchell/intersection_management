@@ -3,7 +3,11 @@ function [A,b] = get_safety_constraints_1(t,x,aa,tSlots,k)
 %   The relevant CBFs are taken into account here.
 
 Nu = 2;
-Na = 2;
+Na = 6;
+
+[A1,b1] = get_following_distance_constraint(t,x,aa,Nu,Na)
+A = A1; b = b1;
+return
 
 [A1,b1] = get_speed_constraints(t,x,aa,Nu,Na);
 

@@ -58,61 +58,33 @@ mincbf = zeros(Na);
 tSlots = assign_tslots(t,x,tSlots);
 
 for aa = 1:Na
-%     [drift,f,g] = dynamics('single_integrator',t,x(aa,:),[0]); %#ok<*ASGLU>
-%     newidx      = aa*Nu+(-1:0);
     
     % Configure path settings for nominal controller
     r           = settings.r;
     rdot        = settings.rdot;
     r2dot       = settings.rddot;
-%     settings0   = struct('Gamma', settings.Gamma,...
-%                          'e1',    settings.e1,   ...
-%                          'e2',    settings.e2,   ...
-%                          'T',     Tfxt(aa),      ...
-%                          'r',     r(aa,:),       ...
-%                          'rdot',  rdot(aa,:),    ...
-%                          'rddot', r2dot(aa,:),   ...
-%                          'cost',  cost);
-    
-    % FxT Path Following Controller
-%     T    = 0.1;
-%     [xdot,ydot] = path_following_fxt_clf_qp(t,x(aa,:),settings0);
-%     vv   = [xdot ydot];
-%     Bnom = (norm([vv])>1.0)*(atan2(ydot,xdot) - x(aa,3));
-%     Vnom = cos(Bnom)*norm(uu);
-%     Anom = (Vnom - x(aa,4)) / T;
-%     u0   = [2*tan(Bnom); Anom];
+
+    % Augment state with beta angle
     beta = atan(Lr/(Lr+Lf)*uLast(aa,1));
     augmented_state = [x(aa,:) beta];
-    u0 = ailon2020_kb_tracking(t,augmented_state,r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
     
-%     T    = 0.1;
-%     [xdot,ydot] = path_following_fxt_clf_qp(t,x(aa,:),settings0);
-%     vv   = [xdot ydot];
-%     Bnom = (norm([vv])>1.0)*(atan2(ydot,xdot) - x(aa,3));
-%     Vnom = cos(Bnom)*norm(uu);
-%     Anom = (Vnom - x(aa,4)) / T;
-%     u0   = [2*tan(Bnom); Anom];
-
-    
-    
+    % Generate nominal control input from trajectory tracking controller
+    u0 = ailon2020_kb_tracking_fxts(t,augmented_state,r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
+    sat_vec = [umax(1); umax(2)];
+    u0 = max(-sat_vec,min(sat_vec,u0));
 
     % Control Constraints
-    Ac  = []; bc = [];
-    Ac  = kron(eye(Nu),[1; -1]);
-    Ac  = Ac(3:4,:);
-%     Ac  = [Ac zeros(2*Nu,Ns)];
-% %     bc  = u_max*ones(2*Nua,1);
+    Ac  = kron(eye(Nu),[1; -1]); Ac  = Ac(3:4,:);
     bc  = [umax(2); umax(2)];
 
     % Class K Functions -- alpha(B) = a*B
     Ak  = [];
     bk  = [];
     
-    % QP1
+    % ********** QP1 ********** %
     % Load Optimization Cost Fcn
-    aq = 100.0;
-%     aq = 1.0;
+    aq = 1000.0;
+    aq = 10.0;
     [Q,p] = cost([u0; 0],[q; aq],(Nu+1),0,Ns);
 
     % Use augmented
@@ -127,21 +99,16 @@ for aa = 1:Na
     
     sat_vec = [umax(1); umax(2)];
 
-    % Solve Optimization problem
-    % 1/2*x^T*Q*x + p*x subject to Ax <= b
-%     sol1 = quadprog(Q,p,A,b,[],[],[],[],[],options);
-%     if isempty(sol1)
-%         
-%         % Fix recommended by MATLAB for when quadprog incorrectly returns
-%         % infeasible
-%         options2 = optimoptions('linprog','Algorithm','dual-simplex');
-%         sol1 = linprog(p,A,b,[],[],[],[],options2);
-%         
-%     end
+%     Solve Optimization problem
+%     1/2*x^T*Q*x + p*x subject to Ax <= b
+    sol1 = quadprog(Q,p,A,b,[],[],[],[],[],options);
+    if isempty(sol1)
+        sol1 = u0;
+    end
 
-    sol1 = u0;
+%     sol1 = u0;
     
-    % QP2
+    % ********** QP2 ********** %
     % Load Optimization Cost Fcn
     [Q,p] = cost(sol1(1:Nu),q,Nu,0,Ns);
     uLast(aa,:) = sol1(1:Nu);
@@ -164,16 +131,21 @@ for aa = 1:Na
         % infeasible
         options2 = optimoptions('linprog','Algorithm','dual-simplex');
         sol = linprog(p,A,b,[],[],[],[],options2);
+        if isempty(sol)
+            disp(aa)
+            disp(t)
+            disp(sol)
+        end
         
     end
     
 %     % Saturate solution in case of error
 %     sol = max(-sat_vec,min(sat_vec,sol));
     
-    u(aa,:)     = sol;%(aa*Nu+(-1:0));
+    u(aa,:)     = sol;
     uLast(aa,:) = sol;
-    uNom(aa,:)  = u0;%(aa*Nu+(-1:0));
-    mincbf(aa)  = 0;%min(cbf);
+    uNom(aa,:)  = u0;
+    mincbf(aa)  = 0;
 
 end
 

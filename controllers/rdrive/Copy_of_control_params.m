@@ -48,10 +48,8 @@ k1 = 2.0; k2 = 2.0;
 a1 = 2.0; a2 = 2.0; a3 = 100.0; a4 = 100.0; % Experimental
 k1 = 0.1; k2 = 0.1;
 
-% NEED TO INCREASE a1a2
-a1 = 0.2; a2 = 0.2; a3 = 100.0; a4 = 100.0; % Experimental
-a1 = 25.0; a2 = 25.0; a3 = 100.0; a4 = 100.0; % Experimental
-k1 = 0.2; k2 = 0.2;
+a1 = 10.0; a2 = 10.0; a3 = 100.0; a4 = 100.0; % Experimental
+k1 = 0.1; k2 = 0.1;
 
 % Mode
 mode = 'kinematic';

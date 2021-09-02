@@ -6,8 +6,9 @@ M         = 1;
 % Road Parameters
 lw        = 3.0;
 hlw       = lw / 2;
-ien       = lw + 0.5;
-far       = 15.0;
+ien       = lw + 1.0;
+far       = 25.0;
+SL        = 12.0; % Speed Limit
 
 nLanes    = 1; 
 nWay      = 4;

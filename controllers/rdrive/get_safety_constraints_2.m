@@ -3,26 +3,27 @@ function [A,b] = get_safety_constraints_2(t,x,aa,tSlots,uLast)
 %   The relevant CBFs are taken into account here.
 
 Nu = 2;
-Na = 2;
+Na = 6;
 
 Lr = 1.0;
 Lf = 1.0;
 
+beta = atan(Lr/(Lr+Lf)*uLast(aa));
+
 [A1,b1] = get_speed_constraints(t,x,aa,Nu,Na);
+[A2,b2] = get_road_constraints(t,x,aa,Nu,Na);
+[A3,b3] = get_interagent_constraints(t,x,aa,uLast,Nu,Na);
+
+A = [A1; A2; A3];
+b = [b1; b2; b3];
 
 if aa >= 4
-    A = A1; b = b1;
     return
 end
 
-beta = atan(Lr/(Lr+Lf)*uLast(aa));
-
-[A2,b2] = get_intersection_constraints(t,x,aa,tSlots,beta,Nu,Na);
-[A3,b3] = get_interagent_constraints(t,x,aa,uLast,Nu,Na);
-% A = [A1; A2; A3]; b = [b1; b2; b3];
-% return
-
-[A4,b4] = get_road_constraints(t,x,aa,Nu,Na);
+[A4,b4] = get_intersection_constraints(t,x,aa,tSlots,beta,Nu,Na);
+A = [A; A4];
+b = [b; b4];
 
 % if t < tSlots(aa,1)
 %     [A3,b3] = get_intersection_constraints(t,x,aa);
@@ -167,7 +168,8 @@ function [A,b] = get_speed_constraints(t,x,aa,Nu,Na)
 % this is now an input constraint
 % A = []; b = [];
 % return
-SL = 10; % Speed limit in m/s
+run('physical_params.m')
+% SL = 15; % Speed limit in m/s
 
 % Case where safety is computed centrally
 if aa == 0
@@ -285,8 +287,13 @@ l0 = 9.0;
 l0 = 25.0;
 l1 = 10.0;
 
+% These worked as of 1:53PM Sep 1
 l0 = 5.0;
 l1 = 25.0;
+
+% Experimental
+l1 = 5.0;
+l0 = l1^2 / 4;
 
 A  = -LgLf;
 b  = Lf2h + l1*Lfh + l0*h;
@@ -317,6 +324,7 @@ for ii = 1:Na
     end
     
     % One circle for now, possibly 2 later on
+    RR = 1.0;
     RR = 1.0;
     
 %     for cc = 1:2
@@ -372,10 +380,44 @@ for ii = 1:Na
             Lf2h = 2*dvx^2 + 2*dvy^2 + 2*dx*dax + 2*dy*day;
             LgLf = [0 2*dx*(cos(x(aa,3)) - sin(x(aa,3))*tan_gamma1)+2*dy*(sin(x(aa,3)) + cos(x(aa,3))*tan_gamma1)];
             
-            l0 = 5.0;
-            l1 = 25.0;
+            % These work 1:15pm Sep 1
             l0 = 10.0;
             l1 = 20.0;
+            
+            l0 = 20.0;
+            l1 = 20.0;
+            
+            l0 = 80.0;
+            l1 = 20.0;
+            
+            l0 = 200.0;
+            l1 = 30.0;
+            
+            % Extremely conservative
+            l0 = 0.25;
+            l1 = 1.0;
+            
+            l1 = 10.0;
+            l0 = l1^2 / 4;
+            
+            l1 = 50.0;
+            l0 = l1^2 / 4;
+            
+            if aa > 3
+                l1 = 1.125;
+                l1 = 3.0;
+                l0 = min(8,l1^2 / 4);
+            end
+            
+            % Experiment
+            max_l1    = 10^6;
+            h2dot_max = Lf2h + LgLf*[0; -1*9.81];
+            while (h2dot_max + l1*Lfh + l0*h < 0) && (l1 < max_l1)
+                l1 = 2*l1;
+                l0 = l1^2 / 4;
+            end
+       
+            
 
             Aw  = [Aw; -LgLf];
             bw  = [bw; Lf2h + l1*Lfh + l0*h];
@@ -386,18 +428,6 @@ for ii = 1:Na
     A = [A; Aw];
     b = [b; bw];
 
-%     th       = x(aa,3);
-%     dx       = x(aa,1)-x(ii,1);
-%     dy       = x(aa,2)-x(ii,2);
-% 
-%     h        = dx^2 + dy^2 - R^2;
-%     Lfh      = 0;
-%     Lgh      = [2*dx*cos(th) 2*dy*sin(th)];
-% 
-%     A(jj,2*aa+(-1:0)) = -Lgh;
-%     b(jj)             = Lfh + k*h;
-% 
-%     jj = jj + 1;
 end
 
 A = round(A,12);

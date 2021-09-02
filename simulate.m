@@ -1,6 +1,5 @@
 %% Framework Setup
 clc; clear; close all; restoredefaultpath;
-%#ok<*NASGU>
 
 % Define Dynamics and Controller modes
 dyn_mode       = "kinematic_bicycle_rdrive";
@@ -43,16 +42,11 @@ xErr  = zeros(nTimesteps,nAgents,nStates);
 
 % Control Logging Variables
 u        = zeros(nTimesteps,nAgents,nControls);
-% v        = zeros(nTimesteps,nAgents,nCBFs);
 uNom     = zeros(nTimesteps,nAgents,nControls);
 uLast    = zeros(nAgents,nControls);
-% uLast    = zeros(nAgents,nControls*nAgents);
-
-% thetaHat = zeros(nTimesteps,nAgents,nCBFs);
 
 % Safety and Performance Logging Variables
-% safety      = zeros(nTimesteps,nAgents,nCBFs);
-% safety      = zeros(nTimesteps,nAgents);
+safety      = zeros(nTimesteps,nAgents);
 performance = zeros(nTimesteps,nAgents,1);
 
 % Define Controller
@@ -70,7 +64,6 @@ tSlots = inf*ones(nAgents,2);
 quit_flags = zeros(nAgents,1);
 t0         = zeros(nAgents,1);
 xS         = zeros(nAgents,2); % old
-% xS         = zeros(nAgents,3); % new
 th0        = zeros(nAgents,1);
 r          = zeros(nAgents,2);
 rdot       = zeros(nAgents,2);
@@ -82,47 +75,54 @@ Tfxt       = ones(nAgents,1);
 for ii = 1:nTimesteps
     t                 = ii *  dt;
     xx                = squeeze(x(ii,:,:));
-    
+
+    % Simulation Progress
     if mod(ii,1/dt) == 0
-        disp(t)
+        disp("************  Percent Completed: "+num2str(fix(t/tf*10^4)/10^2)+"%  ************")
+        disp("************  Time Elapsed:      "+num2str(fix(t*10^2)/10^2)+"s  ************")
     end
-    
+
     % Update Settings
     for aa = 1:nAgents
+
+        % Determine which path segment is active
         addidx      = (norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2)) < tol && t > tSlots(aa,1));
         newidx      = gidx(aa) + addidx;
-        
+
+        % Set quit flag to true if final goal met
         if newidx > size(xGoal{aa},1)
             quit_flags(aa) = 1;
         end
-        
+
+        % Specify path segment
         old_gidx    = gidx(aa);
         gidx(aa)    = min(newidx,size(xGoal{aa},1));
-        
+
+        % Assign path segment data
         if old_gidx ~= gidx(aa) || ii == 1
             t0(aa)      = t;
             xS(aa,:)    = xx(aa,1:2); % Old way
-%             xS(aa,:)    = xx(aa,1:3); % New way
             th0(aa)     = xx(aa,3);
         end
-            
-        settings = struct('T',    Tpath{aa}(gidx(aa)),...
-                          't0',   t0(aa),                   ...
-                          'xS',   xS(aa,:),                   ...
+
+        % Consolidate path segment data and get trajectory info
+        Tfxt(aa) = Tpath{aa}(gidx(aa));
+        settings = struct('T',    Tfxt(aa),             ...
+                          't0',   t0(aa),               ...
+                          'xS',   xS(aa,:),             ...
                           'xF',   xGoal{aa}(gidx(aa),:),...
-                          'th0',  th0(aa),                  ...
-                          'R',    Rpath{aa}(gidx(aa)),   ...
+                          'th0',  th0(aa),              ...
+                          'R',    Rpath{aa}(gidx(aa)),  ...
                           'path', path{aa}{gidx(aa)});
         [r(aa,:),rdot(aa,:),rddot(aa,:)] = trajectories(t,xx(aa,:),settings);
-        
-        Tfxt(aa) = Tpath{aa}(gidx(aa));
-                         
+
     end
-    
+
+    % Exit simulation if all goals met
     if all(quit_flags == 1)
         break
     end
-    
+
     settings          = struct('dynamics', @dynamics,...
                                'uMode',    con_mode, ...
                                'uLast',    uLast,    ...
@@ -138,14 +138,14 @@ for ii = 1:nTimesteps
     try
         % Compute control input
         data         = controller(t,xx,settings);
-        
+
         % Organize data
         u(ii,:,:)    = data.u;
         uLast        = data.uLast;
         safety(ii,:) = data.cbf;
         tSlots       = data.tSlots;
         uNom(ii,:,:) = data.uNom;
-        
+
     catch ME
         t
         disp(ME.message)
@@ -156,96 +156,26 @@ for ii = 1:nTimesteps
     % Update Dynamics
     [xdot,f,g]    = dynamics(dyn_mode,t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)));
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
-    
+
     % Restrict Angles to between -pi and pi
     x(ii + 1,:,3) = wrapToPi(x(ii + 1,:,3));
-    
+
 end
 beep
 
 %% Plot Simulation Results
-% filename = 'datastore/single_integrator/four_ellipses_distributed.mat';
-% load(filename)
-filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
-% tf = 2.5;
 ii = fix(t / dt);
-
-lw = 3.0;
-far = 25.0;
 tt = linspace(dt,ii*dt,ii);
-edge_SEvx =  lw*ones(ii,1);
-edge_SEvy = linspace(-far,-lw,ii);
-edge_SEhx = linspace(lw,far,ii);
-edge_SEhy = -lw*ones(ii,1);
-
-edge_SWvx = -lw*ones(ii,1);
-edge_SWvy = linspace(-far,-lw,ii);
-edge_SWhx = linspace(-far,-lw,ii);
-edge_SWhy = -lw*ones(ii,1);
-
-edge_NEvx =  lw*ones(ii,1);
-edge_NEvy = linspace(lw,far,ii);
-edge_NEhx = linspace(lw,far,ii);
-edge_NEhy =  lw*ones(ii,1);
-
-edge_NWvx = -lw*ones(ii,1);
-edge_NWvy = linspace(lw,far,ii);
-edge_NWhx = linspace(-far,-lw,ii);
-edge_NWhy =  lw*ones(ii,1);
-
-center_Sx =  0.0*ones(ii,1);
-center_Sy = linspace(-far,-lw,ii);
-
-center_Nx =  0.0*ones(ii,1);
-center_Ny = linspace(lw,far,ii);
-
-center_Ex = linspace(lw,far,ii);
-center_Ey = 0.0*ones(ii,1);
-
-center_Wx = linspace(-far,-lw,ii);
-center_Wy = 0.0*ones(ii,1);
-
-obstacles = [struct('x',edge_SEvx,'y',edge_SEvy,'color','k'),
-             struct('x',edge_SEhx,'y',edge_SEhy,'color','k'),
-             struct('x',edge_SWvx,'y',edge_SWvy,'color','k'),
-             struct('x',edge_SWhx,'y',edge_SWhy,'color','k'),
-             struct('x',edge_NEvx,'y',edge_NEvy,'color','k'),
-             struct('x',edge_NEhx,'y',edge_NEhy,'color','k'),
-             struct('x',edge_NWvx,'y',edge_NWvy,'color','k'),
-             struct('x',edge_NWhx,'y',edge_NWhy,'color','k'),
-             struct('x',center_Sx,'y',center_Sy,'color','y'),
-             struct('x',center_Nx,'y',center_Ny,'color','y'),
-             struct('x',center_Ex,'y',center_Ey,'color','y'),
-             struct('x',center_Wx,'y',center_Wy,'color','y')];
-
-
-
-% load(road_objects.mat)
-% ell1x = cx1 + dx1.*cos(2*pi*tt); ell1y = cy1 + dy1.*sin(2*pi*tt);
-% ell2x = cx2 + dx2.*cos(2*pi*tt); ell2y = cy2 + dy2.*sin(2*pi*tt);
-% ell3x = cx3 + dx3.*cos(2*pi*tt); ell3y = cy3 + dy3.*sin(2*pi*tt);
-% ell4x = cx4 + dx4.*cos(2*pi*tt); ell4y = cy4 + dy4.*sin(2*pi*tt);
-
-% figure(1);
-% title('State Trajectories')
-% hold on
-% plot(ell1x,ell1y,'k','LineWidth',lw)
-% plot(ell2x,ell2y,'k','LineWidth',lw)
-% plot(ell3x,ell3y,'k','LineWidth',lw)
-% plot(ell4x,ell4y,'k','LineWidth',lw)
-% for jj = 3:nAgents
-%     plot(tt,x(1:ii,jj,1),'LineWidth',lw)
-% end
-% hold off
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
 
 figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
-    plot(tt,atan(uNom(1:ii,jj,1)),'LineWidth',lw)
+%     plot(tt,atan(uNom(1:ii,jj,1)),'LineWidth',lw)
 end
-legend('\omega_1','\omega_{1,nom}','\omega_2','\omega_{2,nom}','\omega_3','\omega_{3,nom}')
+legend('\omega_1','\omega_2','\omega_3','\omega_4','\omega_5','\omega_6')
 hold off
 
 figure(3);
@@ -253,33 +183,17 @@ title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
-    plot(tt,uNom(1:ii,jj,2),'LineWidth',lw)
-
-%     plot(tt,u_nom(1:ii,jj,1),'LineWidth',lw)
+%     plot(tt,uNom(1:ii,jj,2),'LineWidth',lw)
 end
-legend('a_1','a_{1,nom}','a_2','a_{2,nom}','a_3','a_{3,nom}')
+legend('a_1','a_2','a_3','a_4','a_5','a_6')
 hold off
 
-% figure(4);
-% title('CBFs')
-% hold on
-% for jj = 1:nAgents
-%     plot(tt,safety(1:ii,jj),'LineWidth',lw)
-% end
-% hold off
-% 
-% figure(3);
-% title('CLFs')
-% hold on
-% for jj = 1:nAgents
-%     plot(performance(1:ii,jj,1),'LineWidth',lw)
-% end
-% hold off
+% Load road geometry
+road_file = 'datastore/geometry/road_markings.mat';       
+load(road_file)
+
+moviename = erase(filename,'.mat');
+cinematographer(dt,x(1:(ii),:,:),obstacles,moviename)
 
 %% Save Simulation Results
 save(filename)
-
-%% Create Movie
-% obstacles = [struct('x',ell1x,'y',ell1y),struct('x',ell2x,'y',ell2y),struct('x',ell3x,'y',ell3y),struct('x',ell4x,'y',ell4y)];
-moviename = erase(filename,'.mat');
-cinematographer(dt,x(1:(ii),:,:),obstacles,moviename)
