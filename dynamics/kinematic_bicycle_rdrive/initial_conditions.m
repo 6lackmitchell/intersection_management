@@ -8,10 +8,11 @@ tol = 5e-1;
 x1       = [ hlw -far   pi/2 5];
 x2       = [-hlw  far  -pi/2 5];
 x3       = [ far  hlw     pi 5];
-x4       = [-45.0 -hlw      0 5];
+x4       = [-40.0 -hlw      0 5];
+x4       = [-30.0 -hlw      0 5];
 x5       = [-55.0 -hlw    0 5];
 x6       = [ 45.0  hlw   pi 5];
-x0       = [x1; x2; x3; x4; x5; x6];
+x0       = [x1; x2; x3; x4];% x5; x6];
 nAgents  = size(x0,1);
 nStates  = size(x0,2);
               
@@ -33,10 +34,10 @@ xGoal{6} = [ ien     hlw;
             -(far^2) hlw];
 
 % Segmented Paths -- time to complete each segment
-Tpath{1} = [4 2 2 2 10];
+Tpath{1} = [4 2 1 2 10];
 Tpath{2} = [4 10];
 Tpath{3} = [4 10];
-Tpath{4} = [6 10];
+Tpath{4} = [5 10];
 Tpath{5} = [6 10];
 Tpath{6} = [6 10];
 
@@ -52,9 +53,9 @@ Rpath{6} = [0 0];
 path{1}  = {'linear', 'linear', 'circular_left', 'linear', 'linear'};
 path{2}  = {'linear', 'linear'};
 path{3}  = {'linear', 'linear'};
-path{4}  = {'linear'};
-path{5}  = {'linear'};
-path{6}  = {'linear'};
+path{4}  = {'linear', 'linear'};
+path{5}  = {'linear', 'linear'};
+path{6}  = {'linear', 'linear'};
 
 gidx     = ones(size(x0,1),1);
 xg       = zeros(size(x0,1),size(xGoal,3));

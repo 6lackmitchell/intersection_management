@@ -3,7 +3,7 @@ clc; clear; close all; restoredefaultpath;
 
 % Define Dynamics and Controller modes
 dyn_mode       = "kinematic_bicycle_rdrive";
-con_mode       = "rdrive";
+con_mode       = "pcca";
 cost_mode      = "costs";
 
 % Add Desired Paths
@@ -70,6 +70,7 @@ rdot       = zeros(nAgents,2);
 rddot      = zeros(nAgents,2);
 gidx       = ones(nAgents,1);
 Tfxt       = ones(nAgents,1);
+wHat       = zeros(nAgents,nAgents*nControls);
 
 %% Execute Simulation
 for ii = 1:nTimesteps
@@ -127,6 +128,7 @@ for ii = 1:nTimesteps
                                'uMode',    con_mode, ...
                                'uLast',    uLast,    ...
                                'tSlots',   tSlots ,  ...
+                               'wHat',     wHat,     ...
                                'Gamma',    Gamma,    ...
                                'e1',       e1,       ...
                                'e2',       e2,       ...
@@ -145,6 +147,7 @@ for ii = 1:nTimesteps
         safety(ii,:) = data.cbf;
         tSlots       = data.tSlots;
         uNom(ii,:,:) = data.uNom;
+        wHat         = data.wHat;
 
     catch ME
         t

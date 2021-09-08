@@ -50,6 +50,10 @@ for aa = 1:size(x,1)
         
         tSlots(aa,2) = tSlots(aa,1) + crossing_time;
         
+    elseif within_assignment_zone(x(aa,:)) && aa > 3
+        tSlots(aa,1) = 0.0;
+        tSlots(aa,2) = 0.0;
+        
     end
         
 end
