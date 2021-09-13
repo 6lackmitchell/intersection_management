@@ -72,11 +72,11 @@ for aa = 1:Na
 
     % Augment state with beta angle
     beta = atan(Lr/(Lr+Lf)*uLast(aa,1));
-    augmented_state = [x(aa,:) beta];
+    state = x(aa,:);
     
     % Generate nominal control input from trajectory tracking controller
-    u0  = ailon2020_kb_tracking_fxts(t,augmented_state,r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
-    u0  = max(-sat_vec,min(sat_vec,u0));
+    u0  = ailon2020_kb_tracking_fxts(t,state,r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
+    u0  = min(sat_vec,max(-sat_vec,u0));
     u00(ctrl_idx) = u0;
 
     % Control Constraints
@@ -92,7 +92,7 @@ for aa = 1:Na
                            'tSlots', tSlots, ...
                            'wHat',   wHat,   ...
                            'uLast',  uLast(:,1));
-    [As,bs] = get_pcca_safety_constraints(t,x,pcca_settings);
+    [As,bs] = get_pcca_safety_constraints_dynamic(t,x,pcca_settings);
     
     % Load Optimization Cost Fcn
     [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,0,Ns);

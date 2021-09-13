@@ -60,27 +60,21 @@ px   = xdotd - k1*err1;
 py   = ydotd - k2*err2;
 norm_p = sqrt(px^2 + py^2);
 
-x_dot   = v *(cos(x(3)) - sin(x(3))*tan(x(5)));
-xd_dot  = vd*(cos(phid) - sin(phid)*tan(betad));
-y_dot   = v *(sin(x(3)) + cos(x(3))*tan(x(5)));
-yd_dot  = vd*(sin(phid) + cos(phid)*tan(betad));
-
-
-err1dot = x_dot - xd_dot;
-err2dot = y_dot - yd_dot;
+err1dot = v*cos(x(3)+beta) - vd*cos(phid+betad);
+err2dot = v*sin(x(3)+beta) - vd*sin(phid+betad);
 pxdot   = x2dotd - k1*err1dot;
 pydot   = y2dotd - k2*err2dot;
 
 theta_s    = atan2(round(py,precision),round(px,precision));
 theta_sdot = (pydot*px - pxdot*py) / norm_p^2;
 
-err3    = wrapToPi((x(3) + x(5)) - theta_s);
+err3    = wrapToPi((x(3) + beta) - theta_s);
 % err3dot = -sign(err3)*(a1*abs(err3)^(0.5) + a2*abs(err3)^(1.5));
 err3dot = -sign(err3)*(a1 + a2*abs(err3)^(2.0));
 
-betadot = err3dot + theta_sdot - v*tan(x(5))/Lr;
+betadot = err3dot + theta_sdot - v*sin(beta)/Lr;
 % beta    = beta + betadot*dt;
-tand    = round((Lr+Lf)/Lr * tan(x(5)),2);
+tand    = round((Lr+Lf)/Lr * tan(beta),2);
 
 norm_p0 = sqrt(px0^2 + py0^2);
 c0      = v0 - norm_p0;
@@ -96,12 +90,12 @@ else
     Ndot = err1dot*px + err1*pxdot + err2dot*py + err2*pydot;
     Bdot = (M/N)*((px*pxdot+py*pydot)/norm_p) + ((Mdot*N - M*Ndot)/N^2)*norm_p;
 end
-ar       = (px*pxdot + py*pydot) / norm_p + Bdot;
+a       = (px*pxdot + py*pydot) / norm_p + Bdot;
 
 % Thus far we have computed acceleration for the velocity of the c.g. of
 % the bicycle -- we need to translate it into acceleration for the velocity
 % of the rear wheel
-% ar = a*cos(beta) - x(4)*betadot*tan(beta);
+ar = a*cos(beta) - x(4)*betadot*tan(beta);
 
 u = [betadot; ar];
 end

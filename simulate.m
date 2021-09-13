@@ -2,7 +2,7 @@
 clc; clear; close all; restoredefaultpath;
 
 % Define Dynamics and Controller modes
-dyn_mode       = "kinematic_bicycle_rdrive";
+dyn_mode       = "dynamic_bicycle_rdrive";
 con_mode       = "pcca";
 cost_mode      = "costs";
 
@@ -87,8 +87,13 @@ for ii = 1:nTimesteps
     for aa = 1:nAgents
 
         % Determine which path segment is active
-        addidx      = (norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2)) < tol && t > tSlots(aa,1));
+        reached     = norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2)) < tol;
+        closer      = norm(xGoal{aa}(min(gidx(aa)+1,size(xGoal{aa},1)),:) - xx(aa,1:2)) < norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2));
+        addidx      = (reached || closer) && t > tSlots(aa,1);
         newidx      = gidx(aa) + addidx;
+        if addidx == 1
+            disp("*** Agent "+num2str(aa)+" has reached Goal "+num2str(newidx-1)+"!!")
+        end
 
         % Set quit flag to true if final goal met
         if newidx > size(xGoal{aa},1)
@@ -170,6 +175,8 @@ beep
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
 filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
+% filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_standardcbf_4car_intersection.mat');
+% filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_pcbf_4car_intersection.mat');
 
 figure(2);
 title('Control Inputs X')

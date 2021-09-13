@@ -2,16 +2,16 @@
 run('physical_params.m')
 
 % This file contains simulation parameters related to environment
-tol = 5e-1;
+tol = 1e-0;
        
 % 6 Vehicles
-x1       = [ hlw -far   pi/2 5];
-x2       = [-hlw  far  -pi/2 5];
-x3       = [ far  hlw     pi 5];
-x4       = [-40.0 -hlw    0 5];
-x4       = [-30.0 -hlw    0 5];
-x5       = [-55.0 -hlw    0 5];
-x6       = [ 45.0  hlw   pi 5];
+x1       = [ hlw -far   pi/2 5 0];
+x2       = [-hlw  far  -pi/2 5 0];
+x3       = [ far  hlw     pi 5 0];
+x4       = [-40.0 -hlw      0 5 0];
+x4       = [-30.0 -hlw      0 5 0];
+x5       = [-55.0 -hlw    0 5 0];
+x6       = [ 45.0  hlw   pi 5 0];
 x0       = [x1; x2; x3; x4];% x5; x6];
 nAgents  = size(x0,1);
 nStates  = size(x0,2);
@@ -34,12 +34,12 @@ xGoal{6} = [ ien     hlw;
             -(far^2) hlw];
 
 % Segmented Paths -- time to complete each segment
-Tpath{1} = [4 2 1 2 10];
-Tpath{2} = [4 10];
-Tpath{3} = [4 10];
-Tpath{4} = [5 10];
-Tpath{5} = [6 10];
-Tpath{6} = [6 10];
+Tpath{1} = [4 2 0.1 1 6];
+Tpath{2} = [4 6];
+Tpath{3} = [4 6];
+Tpath{4} = [5 6];
+Tpath{5} = [6 6];
+Tpath{6} = [6 6];
 
 % Radius of each segment
 Rpath{1} = [0 0 1.5 0 0];
