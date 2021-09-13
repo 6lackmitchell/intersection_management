@@ -1,3 +1,4 @@
+% Backup code, in case it needs to be regenerated
 lw = 3.0;
 far = 25.0;
 edge_SEvx =  lw*ones(ii,1);

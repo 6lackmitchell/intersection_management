@@ -1,4 +1,18 @@
-%% Framework Setup
+%simulate - main script for simulating the evolution of dynamical systems
+%This script simulates a dynamical system by using function handles for
+%both the system dynamics and control scheme. The data is then displayed in
+%plot and video form and stored for future analysis.
+%
+% Syntax:  simulate
+%
+% Other m-files required: dynamics, controller
+%
+% Author: Mitchell Black
+% Email: mblackjr@umich.edu
+% Website: http://www.blackmitchell.com
+% Sep 2021; Last revision: 13-Sep-2021
+
+% Framework Setup
 clc; clear; close all; restoredefaultpath;
 
 % Define Dynamics and Controller modes

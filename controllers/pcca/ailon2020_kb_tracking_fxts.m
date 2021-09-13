@@ -1,8 +1,35 @@
 function u = ailon2020_kb_tracking_fxts(t,x,r,rdot,r2dot,t0,aa)
-%AILON2020_KB_TRACKING Asymptotically stable tracking controller for 
-%kinematic bicycle model
-%   Detailed explanation goes here
-% Load control params
+%ailon2020_kb_tracking_fxts - FxTS tracking controller for bicycle model
+%This controller drives the state of the system governed by kinematic
+%bicycle dynamics to some desired trajectory in fixed-time (and keeps it on
+%the trajectory).
+%
+% Syntax:  [u] = ailon2020_kb_tracking_fxts(t,x,r,rdot,r2dot,t0,aa)
+%
+% Inputs:
+%    t:        current time in sec -- float
+%    x:        current state vector -- ROW vector
+%    r:        desired state vector -- ROW vector
+%    rdot:     desired velocity vector -- ROW vector
+%    r2dot:    desired acceleration vector -- ROW vector
+%    t0:       initial time -- float
+%    aa:       index of agent -- integer
+%
+% Outputs:
+%    u: nominal control input -- COLUMN vector
+%
+% Example: 
+%    u = ailon2020_kb_tracking_fxts(t,x,r,rdot,r2dot,t0,aa)
+%
+% Other m-files required: control_params.m, physical_params.m, timing.m
+% Subfunctions: rotate
+% MAT-files required: MAT files are generated for initial conditions
+%
+% Author: Mitchell Black
+% Email: mblackjr@umich.edu
+% Website: http://www.blackmitchell.com
+% Aug 2021; Last revision: 13-Sep-2021
+%------------- BEGIN CODE --------------% Load control params
 run('control_params.m')
 run('physical_params.m')
 run('timing.m')
@@ -21,7 +48,7 @@ err1 = x(1) - xd;
 err2 = x(2) - yd;
 
 % Determine initial control conditions
-filepath = '/Users/mblack/Documents/git/intersection_management/controllers/rdrive/';
+filepath = '/Users/mblack/Documents/git/intersection_management/controllers/pcca/';
 filename = strcat(filepath,'initial_tracking_conditions',num2str(aa),'.mat');
 if t == t0
     v0  = v;
