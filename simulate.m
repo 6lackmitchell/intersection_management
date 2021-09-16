@@ -77,7 +77,7 @@ tSlots = inf*ones(nAgents,2);
 % More Settings
 quit_flags = zeros(nAgents,1);
 t0         = zeros(nAgents,1);
-xS         = zeros(nAgents,2); % old
+xS         = zeros(nAgents,2);
 th0        = zeros(nAgents,1);
 r          = zeros(nAgents,2);
 rdot       = zeros(nAgents,2);
@@ -210,6 +210,15 @@ for jj = 1:nAgents
 %     plot(tt,uNom(1:ii,jj,2),'LineWidth',lw)
 end
 legend('a_1','a_2','a_3','a_4','a_5','a_6')
+hold off
+
+figure(4);
+title('CBFs')
+hold on
+for jj = 1:nAgents
+    plot(tt,safety(1:ii,jj),'LineWidth',lw)
+end
+legend('h_1','h_2','h_3','h_4','h_5','h_6')
 hold off
 
 % Load road geometry

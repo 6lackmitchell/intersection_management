@@ -100,7 +100,7 @@ for aa = 1:Na
                            'tSlots', tSlots, ...
                            'wHat',   wHat,   ...
                            'uLast',  uLast(:,1));
-    [As,bs] = get_pcca_safety_constraints_dynamic(t,x,pcca_settings);
+    [As,bs,hs] = get_pcca_safety_constraints_dynamic(t,x,pcca_settings);
     
     % Load Optimization Cost Fcn
     [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,0,Ns);
@@ -109,28 +109,47 @@ for aa = 1:Na
     % Constraint Matrix
     A = [Ac; Ak; As];
     b = [bc; bk; bs];
+    
+    % Count
+    count = 0;
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
-    sol = quadprog(Q,p,A,b,[],[],[],[],[],options);
-    if isempty(sol)
+    [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
+    while exitflag ~= 1 && count < 3
         
-        % Fix recommended by MATLAB for when quadprog incorrectly returns
-        % infeasible
-        options2 = optimoptions('linprog','Algorithm','dual-simplex');
-        sol = linprog(p,A,b,[],[],[],[],options2);
-        if isempty(sol)
-            disp(aa)
-            disp(t)
-            disp(sol)
+        if exitflag == 0
+            % Number of iterations exceeded
+            options  = optimoptions('quadprog','Display','off','MaxIter',500,'TolFun',1e-6);
+            [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
+            count = count + 1;
+            continue
+
+        elseif exitflag < 0
+            % Error
+            disp(t);
+            disp(exitflag);
+            disp('Error');
+            break
+
         end
-        
-    end
     
+%         
+%         % Fix recommended by MATLAB for when quadprog incorrectly returns
+%         % infeasible
+%         options2 = optimoptions('linprog','Algorithm','dual-simplex');
+%         sol = linprog(p,A,b,[],[],[],[],options2);
+%         if isempty(sol)
+%             disp(aa)
+%             
+%             disp(sol)
+%         end
+    end
+           
     u(aa,:)     = sol(ctrl_idx);
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u0;
-    mincbf(aa)  = 0;
+    mincbf(aa)  = min(hs);
     sols(aa,:)  = sol;
 
 end

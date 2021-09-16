@@ -25,8 +25,9 @@ R = 2.0;
 
 % QP Control Parameters
 % q = ones(Nu+Ns,1);
-% q = [1 / umax(1)^2; 1 / umax(2)^2];
-q = [10; 0.1];
+q = [100 / umax(1)^2; 1 / umax(2)^2]; % This works well at tmax=3
+q = [1e0 / umax(1)^2; 1e-4 / umax(2)^2];
+% q = [20; 0.1];
 
 % FxTS Parameters
 Gamma = [1 0; 0 1];
@@ -65,6 +66,10 @@ k1 = 10.0; k2 = 10.0;
 
 % Start low and go higher
 a1 = 2.0; a2 = 2.0; a3 = 1.0; a4 = 1.0; % Experimental
+k1 = 2.0; k2 = 2.0;
+
+% THESE WORK REALLY WELL -- Sep 13 5:23PM
+a1 = 0.1; a2 = 0.1; a3 = 0.1; a4 = 0.1; % Experimental
 k1 = 2.0; k2 = 2.0;
 
 % Mode

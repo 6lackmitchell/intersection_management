@@ -1,4 +1,4 @@
-function [A,b] = get_pcca_safety_constraints_dynamic(t,x,settings)
+function [A,b,h] = get_pcca_safety_constraints_dynamic(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -18,7 +18,7 @@ settings.('Lf')   = Lf;
 settings.('lw')   = 3.0;
 settings.('beta') = beta;
 
-A = []; b = [];
+A = []; b = []; h = [];
 
 for aa = 1:Na
     
@@ -28,31 +28,38 @@ for aa = 1:Na
     
     settings.('aa') = aa;
     
-    [A1,b1] = get_speed_constraints(t,x,settings);
-    [A2,b2] = get_road_constraints(t,x,settings);
+    [A1,b1,h1] = get_speed_constraints(t,x,settings);
+    [A2,b2,h2] = get_road_constraints(t,x,settings);
     A = [A; A1; A2];
     b = [b; b1; b2];
+    if aa == agent
+        h = [h; h1; h2];
+    end
 
     % Unscheduled vehicles don't consider intersection or interagent safety
     if aa >= 4
-        return
+        continue
     end
 
 %     [A3,b3] = get_interagent_constraints(t,x,settings);
 %     [A3,b3] = get_nonspherical_interagent_constraints(t,x,settings);
-    [A3,b3] = get_collision_avoidance_constraints(t,x,settings);
+    [A3,b3,h3] = get_collision_avoidance_constraints(t,x,settings);
     A = [A; A3];
     b = [b; b3];
 
-    [A4,b4] = get_intersection_constraints(t,x,settings);
+    [A4,b4,h4] = get_intersection_constraints(t,x,settings);
     A = [A; A4];
     b = [b; b4];
+    
+    if aa == agent
+        h = [h; h3; h4];
+    end
     
 end
 
 end
 
-function [A,b] = get_road_constraints(t,x,settings)
+function [A,b,h] = get_road_constraints(t,x,settings)
 aa = settings.aa;
 lw = settings.lw;
 Lr = settings.Lr;
@@ -70,10 +77,15 @@ ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
 ax_con = [-xx(4)*sin(xx(3))*sec(xx(5))^2; cos(xx(3))-sin(xx(3))*tan(xx(5))]';
 ay_con = [ xx(4)*cos(xx(3))*sec(xx(5))^2; sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
+% l1 = 5.0;
+% l0 = 10.0;
+
 l1 = 5.0;
-l0 = 10.0;
+l0 = l1^2 / 4;
 settings.('l1') = l1;
 settings.('l0') = l0;
+h = 999;
+
 
 if xx(1) < lw && xx(1) > -lw && xx(2) < lw && xx(2) > -lw
     return
@@ -81,27 +93,27 @@ elseif xx(1) > 0 && xx(1) < lw
     settings.('vx') = vx;
     settings.('ax_unc') = ax_unc;
     settings.('ax_con') = ax_con;
-    [A,b] = get_SENEroad_constraint(t,xx,settings);
+    [A,b,h] = get_SENEroad_constraint(t,xx,settings);
 elseif xx(2) > 0 && xx(2) < lw
     settings.('vy') = vy;
     settings.('ay_unc') = ay_unc;
     settings.('ay_con') = ay_con;
-    [A,b] = get_ENWNroad_constraint(t,xx,settings);
+    [A,b,h] = get_ENWNroad_constraint(t,xx,settings);
 elseif xx(2) < 0 && xx(2) > -lw
     settings.('vy') = vy;
     settings.('ay_unc') = ay_unc;
     settings.('ay_con') = ay_con;
-    [A,b] = get_ESWSroad_constraint(t,xx,settings);
+    [A,b,h] = get_ESWSroad_constraint(t,xx,settings);
 elseif xx(1) < 0 && xx(1) > -lw
     settings.('vx') = vx;
     settings.('ax_unc') = ax_unc;
     settings.('ax_con') = ax_con;
-    [A,b] = get_NWSWroad_constraint(t,xx,settings);
+    [A,b,h] = get_NWSWroad_constraint(t,xx,settings);
 end
 
 end
 
-function [A,b] = get_SENEroad_constraint(t,x,settings)
+function [A,b,h] = get_SENEroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -133,13 +145,14 @@ A(1,idx) = -LgLf1;
 A(2,idx) = -LgLf2;
 b(1)     = Lf2h1 + l1*Lfh1 + l0*h1;
 b(2)     = Lf2h2 + l1*Lfh2 + l0*h2;
+h        = [h1; h2];
 
 A = round(A,12);
 b = round(b,12);
 
 end
 
-function [A,b] = get_ESWSroad_constraint(t,x,settings)
+function [A,b,h] = get_ESWSroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -171,13 +184,14 @@ A(1,idx) = -LgLf1;
 A(2,idx) = -LgLf2;
 b(1)     = Lf2h1 + l1*Lfh1 + l0*h1;
 b(2)     = Lf2h2 + l1*Lfh2 + l0*h2;
+h        = [h1; h2];
 
 A = round(A,12);
 b = round(b,12);
 
 end
 
-function [A,b] = get_ENWNroad_constraint(t,x,settings)
+function [A,b,h] = get_ENWNroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -209,13 +223,14 @@ A(1,idx) = -LgLf1;
 A(2,idx) = -LgLf2;
 b(1)     = Lf2h1 + l1*Lfh1 + l0*h1;
 b(2)     = Lf2h2 + l1*Lfh2 + l0*h2;
+h        = [h1; h2];
 
 A = round(A,12);
 b = round(b,12);
 
 end
 
-function [A,b] = get_NWSWroad_constraint(t,x,settings)
+function [A,b,h] = get_NWSWroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -247,13 +262,14 @@ A(1,idx) = -LgLf1;
 A(2,idx) = -LgLf2;
 b(1)     = Lf2h1 + l1*Lfh1 + l0*h1;
 b(2)     = Lf2h2 + l1*Lfh2 + l0*h2;
+h        = [h1; h2];
 
 A = round(A,12);
 b = round(b,12);
 
 end
 
-function [A,b] = get_speed_constraints(t,x,settings)
+function [A,b,h] = get_speed_constraints(t,x,settings)
 run('physical_params.m')
 aa = settings.aa;
 Nu = settings.Nu;
@@ -275,7 +291,7 @@ b = round(b,12);
 
 end
 
-function [A,b] = get_intersection_constraints(t,x,settings)
+function [A,b,h] = get_intersection_constraints(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -288,7 +304,6 @@ idx = (-1:0)+aa*Nu;
 
 xx = x(aa,:);
 A = []; b = [];
-h = -10;
 
 % vx and vy
 vx = xx(4)*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
@@ -301,6 +316,7 @@ ax_con = [-xx(4)*sin(xx(3))*sec(xx(5))^2; cos(xx(3))-sin(xx(3))*tan(xx(5))]';
 ay_con = [ xx(4)*cos(xx(3))*sec(xx(5))^2; sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
 if t > tSlots(aa,1)
+    h = 999;
     return
     
 elseif xx(1) > 0 && xx(1) < lw && xx(2) < -lw
@@ -362,23 +378,30 @@ A = round(A,12);
 b = round(b,12);
 end
 
-function [A,b] = get_collision_avoidance_constraints(t,x,settings)
+function [A,b,h] = get_collision_avoidance_constraints(t,x,settings)
 Nu    = settings.Nu;
 Na    = settings.Na;
 uLast = settings.uLast;
 Lr    = settings.Lr;
 Lf    = settings.Lf;
+AA    = settings.aa;
 AAA   = settings.AAA;
 wHat  = settings.wHat;
 beta  = settings.beta;
 
 sl = 1.0;
 sw = 0.5;
+sw = 1.0;
 
-A = []; b = [];
+A = []; b = []; H = [];
 
 % Loop through every scheduled agent for PCCA
 for aa = 1:3
+    
+    % Is this correct?
+    if AA > aa
+        continue
+    end
     
     % Loop through all other agents for interagent completeness
     for ii = 4:Na
@@ -394,9 +417,11 @@ for aa = 1:3
         idx_aa = (-1:0)+aa*Nu;
         idx_ii = (-1:0)+ii*Nu;
 
-        Aw = []; bw = [];
+        Aw = []; bw = []; hw = [];
               
         x_scale = sw / sl;
+        
+%         Rot
         
         
         % dx and dy
@@ -412,7 +437,8 @@ for aa = 1:3
         dvy = vay - viy;
         
         % Solve for minimizer of h
-        tmax = 1.5;
+        tmax = 2.0;
+%         tmax = 1.0;
         T    = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2);
         
         % accelerations -- controlled (con) and uncontrolled (unc)
@@ -441,11 +467,13 @@ for aa = 1:3
         day_con = aya_con - ayi_con;
         
         % Saturate T and assign Tdot
-        if T > tmax
-            T = tmax;
-            Tdot_unc = 0;
-            Tdot_con = zeros(1,Na*Nu);      
-        elseif T < 0
+%         if T > tmax
+% %             T = tmax;
+%             
+%             Tdot_unc = 0;
+%             Tdot_con = zeros(1,Na*Nu);      
+%         elseif T < 0
+        if T < 0
             T = 0;
             Tdot_unc = 0;
             Tdot_con = zeros(1,Na*Nu);      
@@ -463,20 +491,25 @@ for aa = 1:3
         Lfh = 2*dx*dvx + 2*dy*dvy + 2*T*Tdot_unc*(dvx^2 + dvy^2) + 2*T^2*(dvx*dax_unc + dvy*day_unc) + 2*Tdot_unc*(dx*dvx + dy*dvy) + 2*T*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
         Lgh = 2*T*Tdot_con*(dvx^2 + dvy^2) + 2*T^2*(dvx*dax_con + dvy*day_con) + 2*Tdot_con*(dx*dvx + dy*dvy) + 2*T*(dx*dax_con + dy*day_con);
         
-        
-%         Lfh = 4*T*(dvx^2 + dvy^2) + 4*(dx*dvx + dy*dvy) + (2*T^2*dvx + 2*T*dx)*dax_unc + (2*T^2*dvy + 2*T*dy)*day_unc;
-%         Lgh = (2*T^2*dvx + 2*T*dx)*dax_con + (2*T^2*dvy + 2*T*dy)*day_con;
-        
         % PCCA Contribution
-        Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' - wHat(AAA,idx_ii)*Lgh(idx_ii)';
+        Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
         
-        l0  = 10.0;
+        l0  = 3.0;
+        l0  = 2.0;
+%         l0  = 1.0;
+
+        if T > tmax
+            Lfh = Lfh + 10*(T - tmax);
+        end
+
         Aw  = [Aw; -Lgh];
         bw  = [bw; Lfh + l0*h];
+        hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
     end
     
     A = [A; Aw];
     b = [b; bw];
+    H = [H; hw];
     
 end
 

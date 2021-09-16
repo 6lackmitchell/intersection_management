@@ -2,6 +2,7 @@
 Lr        = 1;
 Lf        = 1;
 M         = 1;
+G         = 9.81; % m/s^2
 
 % Road Parameters
 lw        = 3.0;
@@ -14,10 +15,7 @@ nLanes    = 1;
 nWay      = 4;
 nControls = 2;
 
-vmax      = 10;           % 10 mps ~ 25 mph
-wmax      = pi / 3;       % 60 deg per second
-umax      = [vmax; wmax];
-
 wmax      = 4*pi;
-amax      = 2 * 9.81;
+amax      = 2 * G;
+amax      = 1 * G;
 umax      = [wmax; amax];
