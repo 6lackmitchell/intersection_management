@@ -1,7 +1,7 @@
 function cinematographer(dt,x,obstacles,filename)
 
 
-color = ['b','k','g','r','m','c'];
+color = repmat(['b','k','g','r','m','c'],1,5);
 lw    = 3.0;
 mksz  = 12.0;
 maxsteps = size(x,1);

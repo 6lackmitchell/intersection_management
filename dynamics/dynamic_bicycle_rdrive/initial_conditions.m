@@ -14,7 +14,7 @@ x4       = [-far -hlw      0 5 0];
 % x4       = [-50.0 -hlw      0 5 0];
 x5       = [-55.0 -hlw    0 5 0];
 x6       = [ 45.0  hlw   pi 5 0];
-x0       = [x1; x2; x3; x4];% x5; x6];
+x0       = [x1; x2; x3; x4; x5; x6];%; x7; x8; x9; x10];
 nAgents  = size(x0,1);
 nStates  = size(x0,2);
               
