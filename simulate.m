@@ -46,8 +46,8 @@ end
 
 % Load settings into workspace
 run('settings/timing.m')
-% run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
-run(strcat('dynamics/',dyn_mode,'/vehicle10_initial_conditions.m'))
+run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
+% run(strcat('dynamics/',dyn_mode,'/vehicle10_initial_conditions.m'))
 run(strcat('controllers/',con_mode,'/control_params.m'))
 
 % State Logging Variables
