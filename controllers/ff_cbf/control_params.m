@@ -15,7 +15,9 @@
 % acc_max = 2 * 9.81;
 
 % Load relevant parameters
-run('vehicle10_initial_conditions.m')
+% run('initial_conditions.m')
+run('initial_conditions_close.m')
+% run('vehicle10_initial_conditions.m')
 
 % Tracking Control Params
 Tc = 0.25;
@@ -71,6 +73,10 @@ k1 = 2.0; k2 = 2.0;
 % THESE WORK REALLY WELL -- Sep 13 5:23PM
 a1 = 0.1; a2 = 0.1; a3 = 0.1; a4 = 0.1; % Experimental
 k1 = 2.0; k2 = 2.0;
+
+% % % Experimental
+% a1 = 0.1; a2 = 0.1; a3 = 0.1; a4 = 0.1; 
+% k1 = 1.0; k2 = 1.0;
 
 % Mode
 mode = 'kinematic';

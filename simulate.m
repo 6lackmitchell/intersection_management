@@ -19,6 +19,7 @@ clc; clear; close all; restoredefaultpath;
 dyn_mode       = "dynamic_bicycle_rdrive";
 con_mode       = "ff_cbf";
 cost_mode      = "costs";
+im_used        = 0;
 
 % Add Desired Paths
 folders = {'controllers','datastore','dynamics','helpers','settings'};
@@ -46,7 +47,8 @@ end
 
 % Load settings into workspace
 run('settings/timing.m')
-run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
+% run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
+run(strcat('dynamics/',dyn_mode,'/initial_conditions_close.m'))
 % run(strcat('dynamics/',dyn_mode,'/vehicle10_initial_conditions.m'))
 run(strcat('controllers/',con_mode,'/control_params.m'))
 
@@ -104,7 +106,7 @@ for ii = 1:nTimesteps
         % Determine which path segment is active
         reached     = norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2)) < tol;
         closer      = norm(xGoal{aa}(min(gidx(aa)+1,size(xGoal{aa},1)),:) - xx(aa,1:2)) < norm(xGoal{aa}(gidx(aa),:) - xx(aa,1:2));
-        allowed     = 1;%t > tSlots(aa,1);
+        allowed     = 1*(~im_used) + im_used*(t > tSlots(aa,1));
         addidx      = (reached || closer) && allowed;
         newidx      = gidx(aa) + addidx;
         if addidx == 1

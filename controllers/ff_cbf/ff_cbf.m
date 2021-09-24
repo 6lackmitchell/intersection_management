@@ -50,6 +50,8 @@ t0       = settings.t0;
 Tfxt     = settings.Tfxt;
 cost     = @min_diff_nominal;
 tSlots   = settings.tSlots;
+maxiter  = 200;
+qpTol    = 1e-8;
 options  = optimoptions('quadprog','Display','off');
 % options  = optimoptions('quadprog','Display','final');
 
@@ -62,7 +64,7 @@ idx = [1:1:Na];
 u      = zeros(Na,Nu);
 uNom   = zeros(Na,Nu);
 d      = zeros(Na,Ns);
-mincbf = zeros(Na);
+mincbf = zeros(Na,1);
 sols   = zeros(Na,Nu*Na);
 
 tSlots = assign_tslots(t,x,tSlots);
@@ -96,7 +98,8 @@ for aa = 1:Na
     bk  = [];
     
     % Safety-Compensating PCCA Control
-    pcca_settings = struct('AAA',    aa,     ...
+    pcca_settings = struct('Na',     Na,     ...
+                           'AAA',    aa,     ...
                            'tSlots', tSlots, ...
                            'wHat',   wHat,   ...
                            'uLast',  uLast(:,1));
@@ -107,45 +110,64 @@ for aa = 1:Na
 %     uLast(aa,:) = sol1(1:Nu);    
 
     % Constraint Matrix
+    strict_tol = 1e-2;
     A = [Ac; Ak; As];
-    b = [bc; bk; bs];
+    b = [bc; bk; bs] - strict_tol;
     
     % Count
     count = 0;
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
-    [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
-    while exitflag ~= 1 && count < 3
+    sol_guess = [];
+    exitflag  = 0;
+    while exitflag ~= 1 && count < 5
+        [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],sol_guess,options);
         
         if exitflag == 0
             % Number of iterations exceeded
-            options  = optimoptions('quadprog','Display','off','MaxIter',500,'TolFun',1e-6);
-            [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
             count = count + 1;
+            options  = optimoptions('quadprog','Display','off','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)));
+            [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
             continue
+            
+        elseif exitflag == -2
+            % Is it actually infeasible? Try solving feasibility problem
+            count = count + 1;
+            ff = zeros(size(Q,1),1);
+            lin_options  = optimoptions('linprog','Display','off');
+            [sol_feas,fval,exitflag,output] = linprog(ff,A,b,[],[],[],[],lin_options);
+            if exitflag == 1
+                % Okay, so it is actually feasible...
+                sol_guess = sol_feas;
+                
+                % Try changing the tolerances (w/ display on)
+%                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)),'TolX',qpTol*10^((2*count)));
+%                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
+                qp_options = optimoptions('quadprog','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
+                [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],qp_options);
+            else
+                % Actually infeasible
+                disp(t);
+                disp(exitflag);
+                disp(aa)
+                disp('Error');
+                return
+            end
 
-        elseif exitflag < 0
+        elseif exitflag < 0 
             % Error
             disp(t);
             disp(exitflag);
             disp(aa)
             disp('Error');
-            break
+            return
 
         end
     
-%         
-%         % Fix recommended by MATLAB for when quadprog incorrectly returns
-%         % infeasible
-%         options2 = optimoptions('linprog','Algorithm','dual-simplex');
-%         sol = linprog(p,A,b,[],[],[],[],options2);
-%         if isempty(sol)
-%             disp(aa)
-%             
-%             disp(sol)
-%         end
     end
+    
+    
            
     u(aa,:)     = sol(ctrl_idx);
     uLast(aa,:) = u(aa,:);
@@ -160,7 +182,7 @@ wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols;
 
 % Configure relevant variables for logging
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);
-cbf   = min(mincbf);
+cbf   = mincbf;%min(mincbf);
 
 % Organize data
 data = struct('u',      u,      ...

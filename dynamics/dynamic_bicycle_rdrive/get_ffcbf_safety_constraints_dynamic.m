@@ -3,9 +3,9 @@ function [A,b,h] = get_ffcbf_safety_constraints_dynamic(t,x,settings)
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
 Lf = 1.0;
-Na = 10;
 
 % Unpack PCCA Settings
+Na     = settings.Na;
 agent  = settings.AAA;
 uLast  = settings.uLast;
 beta   = atan(Lr/(Lr+Lf)*uLast);
@@ -37,11 +37,13 @@ for aa = 1:Na
     
 end
 
-[A3,b3,h3] = get_collision_avoidance_constraints(t,x,settings);
+if agent < 4
+    [A3,b3,h3] = get_collision_avoidance_constraints(t,x,settings);
 
-A = [A; A3];
-b = [b; b3];
-h = [h; h3];
+    A = [A; A3];
+    b = [b; b3];
+    h = [h; h3];
+end
 
 
 end
@@ -290,8 +292,9 @@ wHat  = settings.wHat;
 beta  = settings.beta;
 
 sl = 1.0;
-sw = 0.5;
 sw = 1.0;
+% sl = 2.0;
+% sw = 2.0;
 
 A = []; b = []; H = [];
 
@@ -299,11 +302,6 @@ A = []; b = []; H = [];
 for aa = 1:Na
     
     Aw = []; bw = []; hw = [];
-    
-%     % Is this correct?
-%     if AA > aa
-%         continue
-%     end
     
     % Loop through all other agents for interagent completeness
     for ii = aa:Na
@@ -334,16 +332,14 @@ for aa = 1:Na
         dvy = vay - viy;
         
         % Solve for minimizer of h
-        kh = 100.0;
-        tmax = 4.0;
-%         tmax = 5.0;
-        eps  = 1e-2;
-%         T    = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2);
+        kh       = 100.0;
+        tmax     = 5.0;
+        eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
         Heavy2   = heavyside(tau_star,kh,tmax);
         tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
-        
+
         % accelerations -- controlled (con) and uncontrolled (unc)
         axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
         axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
@@ -358,16 +354,15 @@ for aa = 1:Na
         aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
         ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
         
-%         % Assume no other agent control -- EXPERIMENTAL
-%         axi_con(idx_ii) = [0; 0]';
-%         ayi_con(idx_ii) = [0; 0]'; 
-
+        % Assume no other agent control -- EXPERIMENTAL
+        axi_con(idx_ii) = [0; 0]';
+        ayi_con(idx_ii) = [0; 0]'; 
         
         % dax and day
         dax_unc = (axa_unc - axi_unc)*x_scale;
-        day_unc = aya_unc - ayi_unc;
+        day_unc =  aya_unc - ayi_unc;
         dax_con = (axa_con - axi_con)*x_scale;
-        day_con = aya_con - ayi_con;
+        day_con =  aya_con - ayi_con;
         
         % taudot
         tau_star_dot_unc = (dax_unc*(2*dvx*tau_star - dx) + day_unc*(2*dvy*tau_star - dy) - (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
@@ -379,46 +374,27 @@ for aa = 1:Na
         tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
         
-        % Saturate T and assign Tdot
-%         if T > tmax
-% %             T = tmax;
-%             
-%             Tdot_unc = 0;
-%             Tdot_con = zeros(1,Na*Nu);      
-%         elseif T < 0
-%         if T < 0 || isnan(T)
-%             T = 0;
-%             Tdot_unc = 0;
-%             Tdot_con = zeros(1,Na*Nu);
-%         else
-%             Tdot_unc = (2*(dvx*dax_unc + dvy*day_unc) - (dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc)*(dvx^2 + dvy^2))/(dvx^2 + dvy^2)^2;
-%             Tdot_con = (2*(dvx*dax_con + dvy*day_con) - (dx*dax_con + dy*day_con)*(dvx^2 + dvy^2))/(dvx^2 + dvy^2)^2;
-%         end
-        
-%         if aa == 1 && ii == 4 && t > 3
-%             disp(T)
-%         end  
-        
         % h and hdot (= Lfh + Lgh*u)
         h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - sw^2;
-%         Lfh = 2*dx*dvx + 2*dy*dvy + 2*T*Tdot_unc*(dvx^2 + dvy^2) + 2*T^2*(dvx*dax_unc + dvy*day_unc) + 2*Tdot_unc*(dx*dvx + dy*dvy) + 2*T*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-%         Lgh = 2*T*Tdot_con*(dvx^2 + dvy^2) + 2*T^2*(dvx*dax_con + dvy*day_con) + 2*Tdot_con*(dx*dvx + dy*dvy) + 2*T*(dx*dax_con + dy*day_con);
         Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
         
         % PCCA Contribution
-        Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
+        Lfh = Lfh - 10;%wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
+%         Lfh = Lfh - min(wHat(AAA,idx_aa)*Lgh(idx_aa)',0) - min(wHat(AAA,idx_ii)*Lgh(idx_ii)',0);
         
         l0  = 3.0;
         l0  = 2.0;
-%         l0  = 1.0;
-
-%         if T > tmax
-%             Lfh = Lfh + 10*(T - tmax);
-%         end
+        l0  = 1.0;
+        
+        if h > 0
+            h_term = h^3 / 10;
+        else
+            h_term = min(h^3 * 10,-10);
+        end
 
         Aw  = [Aw; -Lgh];
-        bw  = [bw; Lfh + l0*h];
+        bw  = [bw; Lfh + h_term];
         hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
     end
     
