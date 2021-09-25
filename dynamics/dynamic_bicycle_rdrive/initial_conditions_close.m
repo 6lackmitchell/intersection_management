@@ -54,12 +54,13 @@ xGoal{6} = [ lw      hlw;
 
 % Segmented Paths -- time to complete each segment
 first_T  = 2.0;
-Tpath{1} = [first_T 1 2 1 6];
-Tpath{2} = [first_T 6];
-Tpath{3} = [first_T 6];
+last_T   = 10.0;
+Tpath{1} = [first_T 1 2 1 last_T];
+Tpath{2} = [first_T last_T];
+Tpath{3} = [first_T last_T];
 
 % % Experimental
-Tpath{4} = [first_T 12];
+Tpath{4} = [first_T last_T];
 
 
 Tpath{5} = [6 6];

@@ -22,6 +22,7 @@ cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
+addpath '/Library/gurobi912/mac64/matlab';
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})

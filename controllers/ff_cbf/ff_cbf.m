@@ -92,6 +92,8 @@ for aa = 1:Na
     % Control Constraints
     Ac  = kron(eye(Nu*Na),[1; -1]); %Ac  = Ac(3:4,:);
     bc  = repmat([umax(1); umax(1); umax(2); umax(2)],Na,1);%[umax(2); umax(2)];
+    LB  = -repmat([umax(1); umax(2)],Na,1);
+    UB  =  repmat([umax(1); umax(2)],Na,1);
 
     % Class K Functions -- alpha(B) = a*B
     Ak  = [];
@@ -110,64 +112,81 @@ for aa = 1:Na
 %     uLast(aa,:) = sol1(1:Nu);    
 
     % Constraint Matrix
-    strict_tol = 1e-2;
-    A = [Ac; Ak; As];
-    b = [bc; bk; bs] - strict_tol;
+%     A = [Ac; Ak; As];
+%     b = [bc; bk; bs] - strict_tol;
+
+    A = As;
+    b = bs;
     
     % Count
-    count = 0;
+    count     = 0;
+    max_count = 5;
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
-    sol_guess = [];
-    exitflag  = 0;
-    while exitflag ~= 1 && count < 5
-        [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],sol_guess,options);
-        
-        if exitflag == 0
-            % Number of iterations exceeded
-            count = count + 1;
-            options  = optimoptions('quadprog','Display','off','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)));
-            [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
-            continue
-            
-        elseif exitflag == -2
-            % Is it actually infeasible? Try solving feasibility problem
-            count = count + 1;
-            ff = zeros(size(Q,1),1);
-            lin_options  = optimoptions('linprog','Display','off');
-            [sol_feas,fval,exitflag,output] = linprog(ff,A,b,[],[],[],[],lin_options);
-            if exitflag == 1
-                % Okay, so it is actually feasible...
-                sol_guess = sol_feas;
-                
-                % Try changing the tolerances (w/ display on)
-%                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)),'TolX',qpTol*10^((2*count)));
-%                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
-                qp_options = optimoptions('quadprog','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
-                [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],qp_options);
-            else
-                % Actually infeasible
-                disp(t);
-                disp(exitflag);
-                disp(aa)
-                disp('Error');
-                return
-            end
+    [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);        
 
-        elseif exitflag < 0 
-            % Error
-            disp(t);
-            disp(exitflag);
-            disp(aa)
-            disp('Error');
-            return
-
-        end
+%     sol_guess = [];
+%     exitflag  = 0;
+%     while exitflag ~= 2 && count < max_count
+%         [sol,fval,exitflag,output] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);
+% %         [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],sol_guess,options);
+% %         [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],LB,UB,sol_guess,options);
+%         
+%         if exitflag == 0
+%             % Number of iterations exceeded
+%             count = count + 1;
+%             options  = optimoptions('quadprog','Display','off','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)));
+%             [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],options);
+%             continue
+%             
+%         elseif exitflag == -2
+%             % Is it actually infeasible? Try solving feasibility problem
+%             count = count + 1;
+%             ff = zeros(size(Q,1),1);
+%             lin_options  = optimoptions('linprog','Display','off');
+%             [sol_feas,fval,exitflag,output] = linprog(ff,A,b,[],[],[],[],lin_options);
+%             if exitflag == 1
+%                 % Okay, so it is actually feasible...
+%                 sol_guess = sol_feas;
+%                 
+%                 % Try changing the tolerances (w/ display on)
+% %                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolFun',qpTol*10^((2*count)),'TolX',qpTol*10^((2*count)));
+% %                 qp_options = optimoptions('quadprog','Display','iter','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
+%                 qp_options = optimoptions('quadprog','MaxIter',maxiter*(count+1),'TolCon',qpTol*10^(-(4*count)),'TolX',qpTol*10^((2*count)));
+%                 [sol,fval,exitflag,output] = quadprog(Q,p,A,b,[],[],[],[],[],qp_options);
+%             else
+%                 % Actually infeasible
+%                 disp(t);
+%                 disp(exitflag);
+%                 disp(aa)
+%                 disp('Error');
+%                 return
+%             end
+% 
+%         elseif exitflag < 0 
+%             % Error
+%             disp(t);
+%             disp(exitflag);
+%             disp(aa)
+%             disp('Error');
+%             return
+% 
+%         end
+%     
+%     end
     
+%     if count == max_count
+%         sol = u00;
+%     end
+    
+    if exitflag ~= 2
+        disp(t);
+        disp(exitflag);
+        disp(aa)
+        disp('Error');
+        return
     end
-    
-    
            
     u(aa,:)     = sol(ctrl_idx);
     uLast(aa,:) = u(aa,:);

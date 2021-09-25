@@ -28,7 +28,7 @@ R = 2.0;
 % QP Control Parameters
 % q = ones(Nu+Ns,1);
 q = [100 / umax(1)^2; 1 / umax(2)^2]; % This works well at tmax=3
-q = [1e0 / umax(1)^2; 1e-4 / umax(2)^2];
+% q = [1e0 / umax(1)^2; 1e-4 / umax(2)^2];
 % q = [20; 0.1];
 
 % FxTS Parameters

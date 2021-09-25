@@ -264,16 +264,16 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 
-idx = (-1:0)+aa*Nu;
-xx  = x(aa,:);
+idx    = (-1:0)+aa*Nu;
+xx     = x(aa,:);
 
-h    = SL - xx(4);
-Lfh  = 0;
-Lgh  = [0 -1];
+h      = SL - xx(4);
+Lfh    = 0;
+Lgh    = [0 -1];
 
 A      = zeros(1,Nu*Na);
 A(idx) = -Lgh;
-b = Lfh + h;
+b      = Lfh + 0.25*h^3;
 
 A = round(A,12);
 b = round(b,12);
@@ -333,7 +333,7 @@ for aa = 1:Na
         
         % Solve for minimizer of h
         kh       = 100.0;
-        tmax     = 5.0;
+        tmax     = 2.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -354,9 +354,9 @@ for aa = 1:Na
         aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
         ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
         
-        % Assume no other agent control -- EXPERIMENTAL
-        axi_con(idx_ii) = [0; 0]';
-        ayi_con(idx_ii) = [0; 0]'; 
+%         % Assume no other agent control -- EXPERIMENTAL
+%         axi_con(idx_ii) = [0; 0]';
+%         ayi_con(idx_ii) = [0; 0]'; 
         
         % dax and day
         dax_unc = (axa_unc - axi_unc)*x_scale;
@@ -380,17 +380,16 @@ for aa = 1:Na
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
         
         % PCCA Contribution
-        Lfh = Lfh - 10;%wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
-%         Lfh = Lfh - min(wHat(AAA,idx_aa)*Lgh(idx_aa)',0) - min(wHat(AAA,idx_ii)*Lgh(idx_ii)',0);
+        Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
         
         l0  = 3.0;
         l0  = 2.0;
         l0  = 1.0;
         
         if h > 0
-            h_term = h^3 / 10;
+            h_term = h^3 / 100;
         else
-            h_term = min(h^3 * 10,-10);
+            h_term = min(h^3 * 10,-20);
         end
 
         Aw  = [Aw; -Lgh];
