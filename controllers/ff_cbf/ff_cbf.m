@@ -191,7 +191,7 @@ for aa = 1:Na
     u(aa,:)     = sol(ctrl_idx);
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u0;
-    mincbf(aa)  = min(hs);
+    mincbf(aa)  = min([hs; 100]);
     sols(aa,:)  = sol;
 
 end

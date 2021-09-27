@@ -1,5 +1,10 @@
 function [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,Aeq,beq,LB,UB)
 %UNTITLED Summary of this function goes here
+% Default values
+sol      = [];
+fval     = 0;
+exitflag = 0;
+
 % Enforce strict inequalities
 strict_tol = 1e-4;
 b          = b  - strict_tol;
@@ -8,13 +13,18 @@ UB         = UB - strict_tol;
 
 %   Detailed explanation goes here
 model.modelsense = 'min';
-model.sense      = [repmat('<',length(b),1); repmat('=',length(beq),1)];   % Specifies that linear constraint is Ax < b
 model.obj        = p;
 model.Q          = sparse(Q);
-model.A          = sparse([A; Aeq]);
-model.rhs        = [b; beq];
+model.A          = sparse(zeros(1,length(p)));
+model.rhs        = [0];
 model.lb         = LB;
 model.ub         = UB;
+
+if size(A,1) > 0
+    model.A          = sparse([A; Aeq]);
+    model.rhs        = [b; beq];
+    model.sense      = [repmat('<',length(b),1); repmat('=',length(beq),1)];   % Specifies that linear constraint is Ax < b
+end
 
 params.OutputFlag     =  0;
 params.BarHomogeneous = -1;
@@ -22,13 +32,13 @@ params.NumericFocus   =  0;
 
 % Solve optimization problem
 result = gurobi(model, params);
-
-% Extract solution info
-sol    = result.x;
-fval   = result.objval;
 status = result.status;
 
 if strcmp(status, 'OPTIMAL')
+    % Extract solution info
+    sol    = result.x;
+    fval   = result.objval;
+
     exitflag = 2;
 else
     gurobi_write(model,'datastore/diagnostic.lp');

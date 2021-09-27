@@ -24,16 +24,14 @@ for aa = 1:Na
     
     settings.('aa') = aa;
     
-    [A1,b1,h1] = get_speed_constraints(t,x,settings);
-    [A2,b2,h2] = get_road_constraints(t,x,settings);
-    A = [A; A1; A2];
-    b = [b; b1; b2];
-%     A = [A; A3];
-%     b = [b; b3];
-    
-    if aa == agent
-        h = [h; h1; h2];
-    end
+%     [A1,b1,h1] = get_speed_constraints(t,x,settings);
+%     [A2,b2,h2] = get_road_constraints(t,x,settings);
+%     A = [A; A1; A2];
+%     b = [b; b1; b2];
+%     
+%     if aa == agent
+%         h = [h; h1; h2];
+%     end
     
 end
 
@@ -291,10 +289,10 @@ AAA   = settings.AAA;
 wHat  = settings.wHat;
 beta  = settings.beta;
 
-sl = 1.0;
-sw = 1.0;
-% sl = 2.0;
-% sw = 2.0;
+sl = 1.5;
+sw = 1.5;
+sl = 2.0;
+sw = 2.0;
 
 A = []; b = []; H = [];
 
@@ -333,7 +331,7 @@ for aa = 1:Na
         
         % Solve for minimizer of h
         kh       = 100.0;
-        tmax     = 2.0;
+        tmax     = 1.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -354,9 +352,9 @@ for aa = 1:Na
         aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
         ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
         
-%         % Assume no other agent control -- EXPERIMENTAL
-%         axi_con(idx_ii) = [0; 0]';
-%         ayi_con(idx_ii) = [0; 0]'; 
+        % Assume no other agent control -- EXPERIMENTAL
+        axi_con(idx_ii) = [0; 0]';
+        ayi_con(idx_ii) = [0; 0]'; 
         
         % dax and day
         dax_unc = (axa_unc - axi_unc)*x_scale;
@@ -384,16 +382,23 @@ for aa = 1:Na
         
         l0  = 3.0;
         l0  = 2.0;
-        l0  = 1.0;
+%         l0  = 1.0;
         
-        if h > 0
-            h_term = h^3 / 100;
-        else
-            h_term = min(h^3 * 10,-20);
-        end
+%         if h > 0
+%             h_term = h^3 / 100;
+%         else
+%             h_term = min(h^3 * 10,-20);
+%         end
+
+%         count = 0;
+%         L1 = Lgh(idx_aa);
+%         while (-abs(L1(1)*pi) - abs(L1(2)*1.5*9.81) >= Lfh + l0*h) && count < 10
+%             l0 = 2*l0;
+%             count = count + 1;
+%         end
 
         Aw  = [Aw; -Lgh];
-        bw  = [bw; Lfh + h_term];
+        bw  = [bw; Lfh + l0*h];
         hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
     end
     

@@ -6,10 +6,10 @@ far = 10.0;
 tol = 5e-1;
        
 % 6 Vehicles
-x1       = [ hlw -far   pi/2 5.1 0];
-x2       = [-hlw  far  -pi/2 5.2 0];
-x3       = [ far  hlw     pi 4.9 0];
-x4       = [-far -hlw      0 4.8 0];
+x1       = [ hlw -far   pi/2 5.0 0];
+x2       = [-hlw  far  -pi/2 5.0 0];
+x3       = [ far  hlw     pi 5.0 0];
+x4       = [-far -hlw      0 5.0 0];
 
 x1       = [ hlw -far+1   pi/2 5.1 0];
 x2       = [-hlw  far-2  -pi/2 5.2 0];

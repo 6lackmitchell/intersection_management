@@ -14,7 +14,7 @@ theta = 0:0.2:2*pi;
 RR    = 0.6;
 
 % Physical Params
-L = 1;
+L = 0.9;
 
 % Make the movie object
 mov = struct('cdata', [], 'colormap', []);
