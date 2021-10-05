@@ -11,3 +11,4 @@
 *.mat
 *.fig
 **/.DS_Store
+*.svg
