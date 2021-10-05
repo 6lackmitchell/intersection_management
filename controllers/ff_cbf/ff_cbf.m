@@ -48,7 +48,8 @@ uLast    = settings.uLast;
 wHat     = settings.wHat;
 t0       = settings.t0;
 Tfxt     = settings.Tfxt;
-cost     = @min_diff_nominal;
+% cost     = @min_diff_nominal;
+cost     = @safe_pcca;
 tSlots   = settings.tSlots;
 maxiter  = 200;
 qpTol    = 1e-8;
@@ -83,6 +84,7 @@ for aa = 1:Na
     % Augment state with beta angle
     beta = atan(Lr/(Lr+Lf)*uLast(aa,1));
     state = x(aa,:);
+    u0    = zeros(Nu,1);
     
     % Generate nominal control input from trajectory tracking controller
     u0  = ailon2020_kb_tracking_fxts(t,state,r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
@@ -105,10 +107,13 @@ for aa = 1:Na
                            'tSlots', tSlots, ...
                            'wHat',   wHat,   ...
                            'uLast',  uLast(:,1));
-    [As,bs,hs] = get_ffcbf_safety_constraints_dynamic(t,x,pcca_settings);
+%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic(t,x,pcca_settings);
+    [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_solo(t,x,pcca_settings);
+%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,pcca_settings);
     
     % Load Optimization Cost Fcn
-    [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,0,Ns);
+%     [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,0,Ns);
+    [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,hs,ctrl_idx);
 %     uLast(aa,:) = sol1(1:Nu);    
 
     % Constraint Matrix

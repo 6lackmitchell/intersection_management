@@ -10,11 +10,11 @@ maxXdim = 30;
 maxYdim = 30;
 
 % Plotting params
-theta = 0:0.2:2*pi;
+theta = 0:2*pi/101:2*pi;
 RR    = 0.6;
 
 % Physical Params
-L = 0.9;
+L = 0.85;
 
 % Make the movie object
 mov = struct('cdata', [], 'colormap', []);
@@ -84,7 +84,7 @@ drawnow update
 mov= getframe(gcf);
 
 % The next few lines make the first frame of the movie play for 2 seconds
-first_frame_pause_secs = 2;
+first_frame_pause_secs = 1;
 for k=1:1:first_frame_pause_secs*FR
     writeVideo(vidObj,mov)
 end
@@ -94,7 +94,7 @@ end
 
 % If the movie is going too slow, you can increase the "stride" value, e.g.
 %   put "for j = 1:10:maxsteps" or some other number in the middle.
-for tt=1:(1/(10*dt)):maxsteps
+for tt=1:(1/(50*dt)):maxsteps
 
     clf
     set(gcf, 'Position', position)

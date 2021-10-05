@@ -1,4 +1,4 @@
-function [A,b,h] = get_ffcbf_safety_constraints_dynamic(t,x,settings)
+function [A,b,h] = get_ffcbf_safety_constraints_dynamic_solo(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -20,20 +20,11 @@ settings.('beta') = beta;
 
 A = []; b = []; h = [];
 
-for aa = 1:Na
-    
-    settings.('aa') = aa;
-    
-    [A1,b1,h1] = get_speed_constraints(t,x,settings);
-    [A2,b2,h2] = get_road_constraints(t,x,settings);
-    A = [A; A1; A2];
-    b = [b; b1; b2];
-    
-    if aa == agent
-        h = [h; h1; h2];
-    end
-    
-end
+[A1,b1,h1] = get_speed_constraints(t,x,settings);
+[A2,b2,h2] = get_road_constraints(t,x,settings);
+A = [A; A1; A2];
+b = [b; b1; b2];
+h = [h; h1; h2];
 
 if agent < 4
     [A3,b3,h3] = get_collision_avoidance_constraints(t,x,settings);
@@ -47,7 +38,7 @@ end
 end
 
 function [A,b,h] = get_road_constraints(t,x,settings)
-aa = settings.aa;
+aa = settings.AAA;
 lw = settings.lw;
 Lr = settings.Lr;
 
@@ -101,7 +92,7 @@ end
 end
 
 function [A,b,h] = get_SENEroad_constraint(t,x,settings)
-aa = settings.aa;
+aa = settings.AAA;
 Nu = settings.Nu;
 Na = settings.Na;
 Lr = settings.Lr;
@@ -140,7 +131,7 @@ b = round(b,12);
 end
 
 function [A,b,h] = get_ESWSroad_constraint(t,x,settings)
-aa = settings.aa;
+aa = settings.AAA;
 Nu = settings.Nu;
 Na = settings.Na;
 Lr = settings.Lr;
@@ -179,7 +170,7 @@ b = round(b,12);
 end
 
 function [A,b,h] = get_ENWNroad_constraint(t,x,settings)
-aa = settings.aa;
+aa = settings.AAA;
 Nu = settings.Nu;
 Na = settings.Na;
 Lr = settings.Lr;
@@ -218,7 +209,7 @@ b = round(b,12);
 end
 
 function [A,b,h] = get_NWSWroad_constraint(t,x,settings)
-aa = settings.aa;
+aa = settings.AAA;
 Nu = settings.Nu;
 Na = settings.Na;
 Lr = settings.Lr;
@@ -258,7 +249,7 @@ end
 
 function [A,b,h] = get_speed_constraints(t,x,settings)
 run('physical_params.m')
-aa = settings.aa;
+aa = settings.AAA;
 Nu = settings.Nu;
 Na = settings.Na;
 
@@ -272,6 +263,7 @@ Lgh    = [0 -1];
 A      = zeros(1,Nu*Na);
 A(idx) = -Lgh;
 b      = Lfh + 0.25*h^3;
+b      = Lfh + h^3;
 
 A = round(A,12);
 b = round(b,12);
@@ -284,7 +276,6 @@ Na    = settings.Na;
 uLast = settings.uLast;
 Lr    = settings.Lr;
 Lf    = settings.Lf;
-AA    = settings.aa;
 AAA   = settings.AAA;
 wHat  = settings.wHat;
 beta  = settings.beta;
@@ -295,124 +286,113 @@ sl = 2.0;
 sw = 2.0;
 
 A = []; b = []; H = [];
+xa = x(AAA,:);
 
 % Loop through every scheduled agent for PCCA
-for aa = 1:Na
+for ii = 1:Na
+
+    if ii == AAA
+        continue;
+    end    
+        
+    xi = x(ii,:);
     
-    Aw = []; bw = []; hw = [];
+    idx_aa = (-1:0)+AAA*Nu;
+    idx_ii = (-1:0)+ii*Nu;
+          
+    x_scale = sw / sl;
+
+    % dx and dy
+    dx  = (xa(1) - xi(1))*x_scale;
+    dy  = xa(2) - xi(2);
     
-    % Loop through all other agents for interagent completeness
-    for ii = aa:Na
-        
-        % Do not consider self in interagent safety
-        if ii == aa
-            continue
-        end
-        
-        xa = x(aa,:);
-        xi = x(ii,:);
-        
-        idx_aa = (-1:0)+aa*Nu;
-        idx_ii = (-1:0)+ii*Nu;
-              
-        x_scale = sw / sl;
-
-        % dx and dy
-        dx  = (xa(1) - xi(1))*x_scale;
-        dy  = xa(2) - xi(2);
-        
-        % dvx and dvy
-        vax = xa(4)*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
-        vay = xa(4)*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
-        vix = xi(4)*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
-        viy = xi(4)*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
-        dvx = (vax - vix)*x_scale;
-        dvy = vay - viy;
-        
-        % Solve for minimizer of h
-        kh       = 1000.0;
-        tmax     = 1.0;
-        eps      = 1e-3;
-        tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
-        Heavy1   = heavyside(tau_star,kh,0);
-        Heavy2   = heavyside(tau_star,kh,tmax);
-        tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
-
-        % accelerations -- controlled (con) and uncontrolled (unc)
-        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
-        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
-        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
-        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
-        axa_con = zeros(1,Na*Nu);
-        axi_con = zeros(1,Na*Nu);
-        aya_con = zeros(1,Na*Nu);
-        ayi_con = zeros(1,Na*Nu);
-        axa_con(idx_aa) = [-xa(4)*sin(xa(3))*sec(xa(5))^2; cos(xa(3))-sin(xa(3))*tan(xa(5))]';
-        axi_con(idx_ii) = [-xi(4)*sin(xi(3))*sec(xi(5))^2; cos(xi(3))-sin(xi(3))*tan(xi(5))]';
-        aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
-        ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
-        
-%         % Assume no other agent control -- EXPERIMENTAL
-%         axi_con(idx_ii) = [0; 0]';
-%         ayi_con(idx_ii) = [0; 0]'; 
-        
-        % dax and day
-        dax_unc = (axa_unc - axi_unc)*x_scale;
-        day_unc =  aya_unc - ayi_unc;
-        dax_con = (axa_con - axi_con)*x_scale;
-        day_con =  aya_con - ayi_con;
-        
-        % taudot
-        tau_star_dot_unc = (dax_unc*(2*dvx*tau_star - dx) + day_unc*(2*dvy*tau_star - dy) - (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
-        tau_star_dot_con = (dax_con*(2*dvx*tau_star - dx) + day_con*(2*dvy*tau_star - dy)) / (dvx^2 + dvy^2 + eps);
-        Heavy_dot1_unc   = dheavyside(tau_star,kh,0)*tau_star_dot_unc;
-        Heavy_dot2_unc   = dheavyside(tau_star,kh,tmax)*tau_star_dot_unc;
-        Heavy_dot1_con   = dheavyside(tau_star,kh,0)*tau_star_dot_con;
-        Heavy_dot2_con   = dheavyside(tau_star,kh,tmax)*tau_star_dot_con;
-        tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
-        tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
-        
-        % h and hdot (= Lfh + Lgh*u)
-        h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - sw^2;
-        Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-        Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
-        
-        % Robust to some acceleration (half of max) but not steering angle
-        Lfh = Lfh - abs(Lgh(idx_ii(2))*2*9.81);
-        Lgh(idx_ii) = [0 0];
+    % dvx and dvy
+    vax = xa(4)*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
+    vay = xa(4)*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
+    vix = xi(4)*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
+    viy = xi(4)*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
+    dvx = (vax - vix)*x_scale;
+    dvy = vay - viy;
     
+    % Solve for minimizer of h
+    kh       = 1000.0;
+    tmax     = 1.0;
+    eps      = 1e-3;
+    tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
+    Heavy1   = heavyside(tau_star,kh,0);
+    Heavy2   = heavyside(tau_star,kh,tmax);
+    tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
 
-
-        % PCCA Contribution
-%         Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
-        
-        l0  = 2.0; % This works well in the nominal (not robust) scenario
-        l0  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
-        l0  = 10.0; % Experimental robust scenario -- worked pretty well
-%         l0  = 1.0;
-        
-%         if h > 0
-%             h_term = h^3 / 100;
-%         else
-%             h_term = min(h^3 * 10,-20);
-%         end
-
-%         count = 0;
-%         L1 = Lgh(idx_aa);
-%         while (-abs(L1(1)*pi) - abs(L1(2)*1.5*9.81) >= Lfh + l0*h) && count < 10
-%             l0 = 2*l0;
-%             count = count + 1;
-%         end
-
-        Aw  = [Aw; -Lgh];
-%         bw  = [bw; Lfh + l0*h]; % Works for standard and half robust case
-        bw  = [bw; Lfh + l0*sign(h)*h^2];
-        hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
-    end
+    % accelerations -- controlled (con) and uncontrolled (unc)
+    axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
+    axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
+    aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
+    ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
+    axa_con = zeros(1,Na*Nu);
+    axi_con = zeros(1,Na*Nu);
+    aya_con = zeros(1,Na*Nu);
+    ayi_con = zeros(1,Na*Nu);
+    axa_con(idx_aa) = [-xa(4)*sin(xa(3))*sec(xa(5))^2; cos(xa(3))-sin(xa(3))*tan(xa(5))]';
+    axi_con(idx_ii) = [-xi(4)*sin(xi(3))*sec(xi(5))^2; cos(xi(3))-sin(xi(3))*tan(xi(5))]';
+    aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
+    ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
     
-    A = [A; Aw];
-    b = [b; bw];
-    H = [H; hw];
+    % dax and day
+    dax_unc = (axa_unc - axi_unc)*x_scale;
+    day_unc =  aya_unc - ayi_unc;
+    dax_con = (axa_con - axi_con)*x_scale;
+    day_con =  aya_con - ayi_con;
+    
+    % taudot
+    tau_star_dot_unc = (dax_unc*(2*dvx*tau_star - dx) + day_unc*(2*dvy*tau_star - dy) - (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
+    tau_star_dot_con = (dax_con*(2*dvx*tau_star - dx) + day_con*(2*dvy*tau_star - dy)) / (dvx^2 + dvy^2 + eps);
+    Heavy_dot1_unc   = dheavyside(tau_star,kh,0)*tau_star_dot_unc;
+    Heavy_dot2_unc   = dheavyside(tau_star,kh,tmax)*tau_star_dot_unc;
+    Heavy_dot1_con   = dheavyside(tau_star,kh,0)*tau_star_dot_con;
+    Heavy_dot2_con   = dheavyside(tau_star,kh,tmax)*tau_star_dot_con;
+    tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
+    tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
+    
+%     % h and hdot (= Lfh + Lgh*u) -- pCBF
+%     h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - sw^2;
+%     Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
+%     Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+%     
+%     % Robust to max acceleration but not steering angle
+%     Lfh = Lfh - abs(Lgh(idx_ii(2))*9.81);
+%     Lgh(idx_ii) = [0 0];
+%     
+%     l0  = 2.0; % This works well in the nominal (not robust) scenario
+%     l0  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
+%     l0  = 5.8; % Experimental robust scenario -- worked pretty well
+% %     l0  = 5.5; % Experimental robust scenario -- worked pretty well
+% %     l0  = 20.0; % Experimental robust scenario -- worked pretty well
+% %     l0  = 2.0; % Experimental robust scenario -- worked pretty well
+% %     l0  = 0.1; % Experimental robust scenario -- worked pretty well
+%     
+%     A = [A; -Lgh];
+% %     b = [b; Lfh + l0*h]; % Works for standard and half robust case
+%     b = [b; Lfh + l0*h];
+% %     b = [b; Lfh + l0*h^3];
+%     H = [H; min(h,(dx^2 + dy^2 - sw^2))];
+
+    % h and hdot (= Lfh + Lgh*u) -- Standard CBF
+    h    = dx^2 + dy^2 - sw^2;
+    Lfh  = 2*dx*dvx + 2*dy*dvy;
+    Lf2h = 2*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
+    LgLf = 2*(dx*dax_con + dy*day_con);
+    
+    % Robust to some acceleration (half of max) but not steering angle
+    Lf2h = Lf2h - abs(LgLf(idx_ii(2))*9.81);
+    LgLf(idx_ii) = [0 0];
+
+    l1 = 40.0;
+    l1 = 30.0;
+    l0 = l1^2 / 4;
+    
+    A = [A; -LgLf];
+    b = [b; Lf2h + l1*Lfh + l0*h];
+    H = [H; h];
     
 end
 

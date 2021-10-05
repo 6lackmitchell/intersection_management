@@ -1,4 +1,4 @@
-function [A,b,h] = get_ffcbf_safety_constraints_dynamic(t,x,settings)
+function [A,b,h] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -372,42 +372,37 @@ for aa = 1:Na
         tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
         
-        % h and hdot (= Lfh + Lgh*u)
-        h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - sw^2;
-        Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-        Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
-        
-        % Robust to some acceleration (half of max) but not steering angle
-        Lfh = Lfh - abs(Lgh(idx_ii(2))*2*9.81);
-        Lgh(idx_ii) = [0 0];
-    
+%         % h and hdot (= Lfh + Lgh*u)
+%         h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - sw^2;
+%         Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
+%         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+% 
+%         % PCCA Contribution
+%         Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
+%         
+%         l0  = 2.0; % This works well in the nominal (not robust) scenario
+%         l0  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
+% 
+%         Aw  = [Aw; -Lgh];
+%         bw  = [bw; Lfh + l0*h]; % Works for standard and half robust case
+%         hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
 
+        % h and hdot (= Lfh + Lgh*u) -- Standard CBF
+        h    = dx^2 + dy^2 - sw^2;
+        Lfh  = 2*dx*dvx + 2*dy*dvy;
+        Lf2h = 2*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
+        LgLf = 2*(dx*dax_con + dy*day_con);
 
         % PCCA Contribution
-%         Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
+        Lf2h = Lf2h + wHat(AAA,idx_aa)*LgLf(idx_aa)' + wHat(AAA,idx_ii)*LgLf(idx_ii)';
+    
+        l1 = 40.0;
+        l1 = 30.0;
+        l0 = l1^2 / 4;
         
-        l0  = 2.0; % This works well in the nominal (not robust) scenario
-        l0  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
-        l0  = 10.0; % Experimental robust scenario -- worked pretty well
-%         l0  = 1.0;
-        
-%         if h > 0
-%             h_term = h^3 / 100;
-%         else
-%             h_term = min(h^3 * 10,-20);
-%         end
-
-%         count = 0;
-%         L1 = Lgh(idx_aa);
-%         while (-abs(L1(1)*pi) - abs(L1(2)*1.5*9.81) >= Lfh + l0*h) && count < 10
-%             l0 = 2*l0;
-%             count = count + 1;
-%         end
-
-        Aw  = [Aw; -Lgh];
-%         bw  = [bw; Lfh + l0*h]; % Works for standard and half robust case
-        bw  = [bw; Lfh + l0*sign(h)*h^2];
-        hw  = [hw; min(h,(dx^2 + dy^2 - sw^2))];
+        Aw = [Aw; -LgLf];
+        bw = [bw; Lf2h + l1*Lfh + l0*h];
+        Hw = [hw; h];
     end
     
     A = [A; Aw];

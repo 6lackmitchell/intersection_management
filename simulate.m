@@ -49,6 +49,7 @@ end
 % Load settings into workspace
 run('settings/timing.m')
 % run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
+% run(strcat('dynamics/',dyn_mode,'/initial_conditions_switch.m'))
 run(strcat('dynamics/',dyn_mode,'/initial_conditions_close.m'))
 % run(strcat('dynamics/',dyn_mode,'/vehicle10_initial_conditions.m'))
 run(strcat('controllers/',con_mode,'/control_params.m'))
@@ -194,7 +195,8 @@ beep
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
-filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_switching_tests.mat');
+% filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_switching_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_standardcbf_4car_intersection.mat');
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_pcbf_4car_intersection.mat');
 

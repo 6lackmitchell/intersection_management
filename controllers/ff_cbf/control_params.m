@@ -17,6 +17,7 @@
 % Load relevant parameters
 % run('initial_conditions.m')
 run('initial_conditions_close.m')
+% run('initial_conditions_switch.m')
 % run('vehicle10_initial_conditions.m')
 
 % Tracking Control Params
@@ -28,7 +29,8 @@ R = 2.0;
 % QP Control Parameters
 % q = ones(Nu+Ns,1);
 q = [100 / umax(1)^2; 1 / umax(2)^2]; % This works well at tmax=3
-q = [1e0 / umax(1)^2; 1e-4 / umax(2)^2];
+q = [1e0 / umax(1)^2; 1e-4 / umax(2)^2]; % This works well in general
+% q = [1e0 / umax(1)^2; 1e-2 / umax(2)^2]; % This works well in general
 % q = [20; 0.1];
 
 % FxTS Parameters
@@ -39,32 +41,6 @@ e1 = 0.5;
 e2 = 1.5;
 
 % Tracking Control Parameters
-a1 = 0.5; a2 = 2.0; a3 = 10.0; % This was working 1:28PM Sep 1
-k1 = 1.0; k2 = 1.0; k3 = 1.0;  % This was working 1:28PM Sep 1
-
-a1 = 1.0; a2 = 1.0; a3 = 50.0; a4 = 20.0; % This WORKED FULLY 3:15PM Sep 1
-k1 = 2.0; k2 = 2.0;
-
-% a1 = 2.0; a2 = 2.0; a3 = 20.0; a4 = 200.0; % Experimental
-% k1 = 5.0; k2 = 5.0;
-
-% a1 = 2.0; a2 = 2.0; a3 = 100.0; a4 = 100.0; % Also worked 3:25PM Sep 1
-% k1 = 2.0; k2 = 2.0;
-% 
-
-
-% a1 = 2.0; a2 = 2.0; a3 = 100.0; a4 = 100.0; % Experimental
-% k1 = 0.1; k2 = 0.1;
-
-% a1 = 0.2; a2 = 0.2; a3 = 100.0; a4 = 100.0; % Experimental
-% 
-% Start low and go higher
-a1 = 10.0; a2 = 10.0; a3 = 0.1; a4 = 0.1; % Experimental
-k1 = 20.0; k2 = 20.0;
-
-% These work -- 8:24AM Sep 10
-a1 = 1.0; a2 = 1.0; a3 = 1.0; a4 = 1.0; % Experimental
-k1 = 10.0; k2 = 10.0;
 
 % Start low and go higher
 a1 = 2.0; a2 = 2.0; a3 = 1.0; a4 = 1.0; % Experimental
@@ -74,9 +50,13 @@ k1 = 2.0; k2 = 2.0;
 a1 = 0.1; a2 = 0.1; a3 = 0.1; a4 = 0.1; % Experimental
 k1 = 2.0; k2 = 2.0;
 
-% % % Experimental
-% a1 = 0.1; a2 = 0.1; a3 = 0.1; a4 = 0.1; 
-% k1 = 1.0; k2 = 1.0;
+% % Experimental
+a1 = 0.2; a2 = 0.2; a3 = 0.2; a4 = 0.2; 
+k1 = 2.0; k2 = 2.0;
+
+% % Experimental
+a1 = 1.0; a2 = 1.0; a3 = 1.0; a4 = 1.0; 
+k1 = 2.0; k2 = 2.0;
 
 % Mode
 mode = 'kinematic';

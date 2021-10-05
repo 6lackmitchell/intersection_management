@@ -103,7 +103,7 @@ theta_sdot = (pydot*px - pxdot*py) / norm_p^2;
 
 err3    = wrapToPi((x(3) + x(5)) - theta_s);
 % err3dot = -sign(err3)*(a1*abs(err3)^(0.5) + a2*abs(err3)^(1.5));
-err3dot = -sign(err3)*(a1 + a2*abs(err3)^(2.0));
+err3dot = -sign(err3)*(a1*abs(err3)^(0.5) + a2*abs(err3)^(1.5));
 
 betadot = err3dot + theta_sdot - v*tan(x(5))/Lr;
 % beta    = beta + betadot*dt;
