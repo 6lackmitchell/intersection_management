@@ -108,12 +108,15 @@ for aa = 1:Na
                            'wHat',   wHat,   ...
                            'uLast',  uLast(:,1));
 %     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic(t,x,pcca_settings);
-    [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_solo(t,x,pcca_settings);
+%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_solo(t,x,pcca_settings);
 %     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,pcca_settings);
+
+    [As,bs,hs,v00,h00] = get_ffcbf_safety_constraints_dynamic_rpcca(t,x,pcca_settings);
     
     % Load Optimization Cost Fcn
 %     [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,0,Ns);
-    [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,hs,ctrl_idx);
+     u00  = u00 + v00;
+    [Q,p] = cost(u00,repmat(q,Na,1),Nu*Na,h00,ctrl_idx);
 %     uLast(aa,:) = sol1(1:Nu);    
 
     % Constraint Matrix
@@ -129,7 +132,7 @@ for aa = 1:Na
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
-    [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);        
+    [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);       
 
 %     sol_guess = [];
 %     exitflag  = 0;

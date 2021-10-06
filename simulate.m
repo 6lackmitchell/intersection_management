@@ -236,5 +236,189 @@ load(road_file)
 moviename = erase(filename,'.mat');
 cinematographer(dt,x(1:(ii),:,:),obstacles,moviename)
 
+%% More Plots
+color = repmat(['b','k','g','r','m','c'],1,5);
+lw    = 6.0;
+mksz  = 20.0;
+maxsteps = size(x,1);
+nAgents = size(x,2);
+maxXdim = 25;
+maxYdim = 25;
+big_font_size = 48;
+
+% Plotting params
+theta = 0:2*pi/101:2*pi;
+RR    = 0.6;
+
+% Physical Params
+L = 0.85;
+
+% Plot 1
+figure('DefaultAxesFontSize',big_font_size);
+title('XY Trajectories'); xlabel('X (m)'); ylabel('Y (m)');
+hold on;
+for oo = 1:length(obstacles)
+    plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
+end
+for ii=1:1:nAgents
+    cx1 = x(100,ii,1) + L/2*cos(x(100,ii,3));
+    cy1 = x(100,ii,2) + L/2*sin(x(100,ii,3));
+    cx2 = x(100,ii,1) - L/2*cos(x(100,ii,3));
+    cy2 = x(100,ii,2) - L/2*sin(x(100,ii,3));
+
+    ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+    ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+
+    if ii < 4
+        ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+        ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+    else
+        ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
+        ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
+        ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
+        ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+        
+        ox1  = [ox1a ox1b];
+        oy1  = [oy1a oy1b];
+        ox2  = [ox2a ox2b];
+        oy2  = [oy2a oy2b];
+    end
+    
+    plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+
+end
+
+for ttt = 1:10:100
+    for jj = 1:nAgents
+        plot(x(ttt,jj,1),x(ttt,jj,2),'o','Color',color(jj),'MarkerSize',mksz,'LineWidth',(lw-3))
+    end
+end
+
+txt = strcat('t = ',num2str(1.0),' sec');
+text(10,10,txt,'FontSize',big_font_size)
+axis([-maxXdim maxXdim -maxYdim maxYdim]);
+hold off
+
+set(gcf,'renderer','painters')
+set(gcf, 'Position', get(0, 'Screensize'));
+saveas(gcf,'datastore/dynamic_bicycle_rdrive/money_sets/XY_Trajectories_T1.eps','epsc')
+
+
+
+% Plot 2
+timestep_n = 200;
+figure('DefaultAxesFontSize',big_font_size);
+title('XY Trajectories'); xlabel('X (m)'); ylabel('Y (m)');
+hold on;
+for oo = 1:length(obstacles)
+    plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
+end
+for ii=1:1:nAgents
+    cx1 = x(timestep_n,ii,1) + L/2*cos(x(timestep_n,ii,3));
+    cy1 = x(timestep_n,ii,2) + L/2*sin(x(timestep_n,ii,3));
+    cx2 = x(timestep_n,ii,1) - L/2*cos(x(timestep_n,ii,3));
+    cy2 = x(timestep_n,ii,2) - L/2*sin(x(timestep_n,ii,3));
+
+    ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+    ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+
+    if ii < 4
+        ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+        ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+    else
+        ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
+        ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
+        ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
+        ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+        
+        ox1  = [ox1a ox1b];
+        oy1  = [oy1a oy1b];
+        ox2  = [ox2a ox2b];
+        oy2  = [oy2a oy2b];
+    end
+    
+    plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+
+end
+
+for ttt = 100:10:timestep_n
+    for jj = 1:nAgents
+        plot(x(ttt,jj,1),x(ttt,jj,2),'o','Color',color(jj),'MarkerSize',mksz,'LineWidth',(lw-3))
+    end
+end
+
+txt = strcat('t = ',num2str(2.0),' sec');
+text(10,10,txt,'FontSize',big_font_size)
+axis([-maxXdim maxXdim -maxYdim maxYdim]);
+hold off
+
+set(gcf,'renderer','painters')
+set(gcf, 'Position', get(0, 'Screensize'));
+saveas(gcf,'datastore/dynamic_bicycle_rdrive/money_sets/XY_Trajectories_T2.eps','epsc')
+
+
+
+% Plot 3
+timestep_n = 350;
+figure('DefaultAxesFontSize',big_font_size);
+title('XY Trajectories'); xlabel('X (m)'); ylabel('Y (m)');
+hold on;
+for oo = 1:length(obstacles)
+    plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
+end
+for ii=1:1:nAgents
+    cx1 = x(timestep_n,ii,1) + L/2*cos(x(timestep_n,ii,3));
+    cy1 = x(timestep_n,ii,2) + L/2*sin(x(timestep_n,ii,3));
+    cx2 = x(timestep_n,ii,1) - L/2*cos(x(timestep_n,ii,3));
+    cy2 = x(timestep_n,ii,2) - L/2*sin(x(timestep_n,ii,3));
+
+    ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+    ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+
+    if ii < 4
+        ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
+        ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+    else
+        ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
+        ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
+        ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
+        ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+        
+        ox1  = [ox1a ox1b];
+        oy1  = [oy1a oy1b];
+        ox2  = [ox2a ox2b];
+        oy2  = [oy2a oy2b];
+    end
+    
+    plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+
+end
+
+for ttt = 200:10:timestep_n
+    for jj = 1:nAgents
+        plot(x(ttt,jj,1),x(ttt,jj,2),'o','Color',color(jj),'MarkerSize',mksz,'LineWidth',(lw-3))
+    end
+end
+
+txt = strcat('t = ',num2str(3.5),' sec');
+text(10,10,txt,'FontSize',big_font_size)
+axis([-maxXdim maxXdim -maxYdim maxYdim]);
+hold off
+
+set(gcf,'renderer','painters')
+set(gcf, 'Position', get(0, 'Screensize'));
+saveas(gcf,'datastore/dynamic_bicycle_rdrive/money_sets/XY_Trajectories_T3.eps','epsc')
+
+
+% hold on
+% for jj = 1:nAgents
+%     plot(tt,safety(1:ii,jj),'LineWidth',lw)
+% end
+% legend('h_1','h_2','h_3','h_4','h_5','h_6')
+% hold off
+
 %% Save Simulation Results
 save(filename)
