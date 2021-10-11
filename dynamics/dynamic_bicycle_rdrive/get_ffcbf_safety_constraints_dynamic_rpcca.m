@@ -403,7 +403,7 @@ for aa = 1:Na
         
         l0  = 2.0; % This works well in the nominal (not robust) scenario
         l0  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
-%         l0  = 10.0; % Experimental 1/2 robust scenario -- worked pretty well
+        l0  = 3.0; % Experimental 1/2 robust scenario -- worked pretty well
 
         Aw  = [Aw; -Lgh];
         bw  = [bw; Lfh + l0*h]; % Works for standard and half robust case

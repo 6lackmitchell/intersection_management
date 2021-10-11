@@ -3,8 +3,8 @@ function [Q,p] = safe_pcca(u_nom,q,Nu,h,idx_aa)
 % h raised to the -1/n
 n = 4;
 k = 0.25;
-% n = 2;
-% k = 0.25;
+n = 2;
+k = 0.001;
 
 % Tracking Nominal Controller: J = 1/2*||u-u_nom||^2 + sum(pi*ai^2)
 Q = [eye(Nu).*q(1:Nu)];

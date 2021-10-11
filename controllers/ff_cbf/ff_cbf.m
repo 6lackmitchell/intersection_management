@@ -132,7 +132,7 @@ for aa = 1:Na
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
-    [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);       
+    [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB);  
 
 %     sol_guess = [];
 %     exitflag  = 0;

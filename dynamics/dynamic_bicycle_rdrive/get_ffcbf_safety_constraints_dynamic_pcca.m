@@ -397,7 +397,7 @@ for aa = 1:Na
         Lf2h = Lf2h + wHat(AAA,idx_aa)*LgLf(idx_aa)' + wHat(AAA,idx_ii)*LgLf(idx_ii)';
     
         l1 = 40.0;
-        l1 = 30.0;
+        l1 = 50.0;
         l0 = l1^2 / 4;
         
         Aw = [Aw; -LgLf];
