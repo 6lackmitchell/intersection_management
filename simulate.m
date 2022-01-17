@@ -15,9 +15,15 @@
 % Framework Setup
 clc; clear; close all; restoredefaultpath;
 
-% Define Dynamics and Controller modes
+% % Define Dynamics and Controller modes
+% % Distributed Adaptive Reciprocal Follower
+% dyn_mode       = "dynamic_bicycle_rdrive";
+% con_mode       = "ff_cbf_darf";
+% cost_mode      = "costs";
+% im_used        = 1;
+% Centralized Priority-Cost Allocation
 dyn_mode       = "dynamic_bicycle_rdrive";
-con_mode       = "ff_cbf";
+con_mode       = "ff_cbf_cpca";
 cost_mode      = "costs";
 im_used        = 0;
 
@@ -48,11 +54,8 @@ end
 
 % Load settings into workspace
 run('settings/timing.m')
-% run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
-% run(strcat('dynamics/',dyn_mode,'/initial_conditions_switch.m'))
-run(strcat('dynamics/',dyn_mode,'/initial_conditions_close.m'))
-% run(strcat('dynamics/',dyn_mode,'/vehicle10_initial_conditions.m'))
-run(strcat('controllers/',con_mode,'/control_params.m'))
+run(strcat('dynamics/',dyn_mode,'/initial_conditions_cpca.m'))
+control_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % State Logging Variables
 x     = zeros(nTimesteps,nAgents,nStates);
@@ -64,11 +67,18 @@ u        = zeros(nTimesteps,nAgents,nControls);
 uNom     = zeros(nTimesteps,nAgents,nControls);
 uLast    = zeros(nAgents,nControls);
 
+% QP Solution Logging Var
+sols     = zeros(nTimesteps,nAgents,nAgents*nControls+4);
+gammas   = zeros(nTimesteps,nAgents,4);
+avalues  = zeros(nTimesteps,nAgents);
+bvalues  = zeros(nTimesteps,nAgents);
+
 % Safety and Performance Logging Variables
 safety      = zeros(nTimesteps,nAgents);
 performance = zeros(nTimesteps,nAgents,1);
 
 % Define Controller
+dynamics   = str2func(dyn_mode);
 controller = str2func(con_mode);
 
 % Specify initial conditions
@@ -86,7 +96,7 @@ xS         = zeros(nAgents,2);
 th0        = zeros(nAgents,1);
 r          = zeros(nAgents,2);
 rdot       = zeros(nAgents,2);
-rddot      = zeros(nAgents,2);
+r2dot      = zeros(nAgents,2);
 gidx       = ones(nAgents,1);
 Tfxt       = ones(nAgents,1);
 wHat       = zeros(nAgents,nAgents*nControls);
@@ -140,13 +150,8 @@ for ii = 1:nTimesteps
                           'th0',  th0(aa),              ...
                           'R',    Rpath{aa}(gidx(aa)),  ...
                           'path', path{aa}{gidx(aa)});
-        [r(aa,:),rdot(aa,:),rddot(aa,:)] = trajectories(t,xx(aa,:),settings);
+        [r(aa,:),rdot(aa,:),r2dot(aa,:)] = trajectories(t,xx(aa,:),settings);
 
-    end
-
-    % Exit simulation if all goals met
-    if all(quit_flags == 1)
-        break
     end
 
     settings          = struct('dynamics', @dynamics,...
@@ -154,25 +159,28 @@ for ii = 1:nTimesteps
                                'uLast',    uLast,    ...
                                'tSlots',   tSlots ,  ...
                                'wHat',     wHat,     ...
-                               'Gamma',    Gamma,    ...
-                               'e1',       e1,       ...
-                               'e2',       e2,       ...
                                'Tfxt',     Tfxt,     ...
                                'r',        r,        ...
                                'rdot',     rdot,     ...
-                               'rddot',    rddot,    ...
+                               'r2dot',    r2dot,    ...
+                               'Lr',       Lr,       ...
+                               'SL',       SL,       ...
                                't0',       t0);
     try
         % Compute control input
-        data         = controller(t,xx,settings);
+        data         = controller(t,xx,settings,control_params);
 
         % Organize data
-        u(ii,:,:)    = data.u;
-        uLast        = data.uLast;
-        safety(ii,:) = data.cbf;
-        tSlots       = data.tSlots;
-        uNom(ii,:,:) = data.uNom;
-        wHat         = data.wHat;
+        u(ii,:,:)       = data.u;
+        uLast           = data.uLast;
+        safety(ii,:)    = data.cbf;
+        tSlots          = data.tSlots;
+        uNom(ii,:,:)    = data.uNom;
+        wHat            = data.wHat;
+%         gammas(ii,:,:)  = data.gamma_sols;
+%         avalues(ii,:)   = data.avalue;
+%         bvalues(ii,:)   = data.bvalue;
+%         sols(ii,:,:) = data.sols;
 
     catch ME
         t
@@ -182,7 +190,7 @@ for ii = 1:nTimesteps
     end
 
     % Update Dynamics
-    [xdot,f,g]    = dynamics(dyn_mode,t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)));
+    xdot          = dynamics(t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)),settings);
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
 
     % Restrict Angles to between -pi and pi
@@ -197,8 +205,14 @@ tt = linspace(dt,ii*dt,ii);
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'car_intersection.mat');
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_switching_tests.mat');
 filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_and_pcca_',num2str(nAgents),'intersection_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/',con_mode,'_and_pcca_',num2str(nAgents),'intersection_close.mat');
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_standardcbf_4car_intersection.mat');
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'pcca_pcbf_4car_intersection.mat');
+% filename = strcat('datastore/',dyn_mode,'/','varying_initial_conditions','/',con_mode,'_',num2str(nAgents),'vehicles_blueahead2.mat');
+% filename = strcat('datastore/',dyn_mode,'/','varying_initial_conditions','/',con_mode,'_',num2str(nAgents),'vehicles_blueahead3.mat');
+% filename = strcat('datastore/',dyn_mode,'/','varying_initial_conditions','/',con_mode,'_',num2str(nAgents),'vehicles_bluebehind2.mat');
+
 
 figure(2);
 title('Control Inputs X')
@@ -215,7 +229,7 @@ title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
-%     plot(tt,uNom(1:ii,jj,2),'LineWidth',lw)
+%     plot(tt,uNom(1:ii,jj,2),':','LineWidth',lw)
 end
 legend('a_1','a_2','a_3','a_4','a_5','a_6')
 hold off
@@ -229,10 +243,48 @@ end
 legend('h_1','h_2','h_3','h_4','h_5','h_6')
 hold off
 
+figure(5);
+title('Gammas')
+hold on
+% plot(tt,gammas(1:ii,1,1),'LineWidth',lw)
+% plot(tt,gammas(1:ii,2,2),'LineWidth',lw)
+% plot(tt,gammas(1:ii,3,3),'LineWidth',lw)
+plot(tt,gammas(1:ii,4,1),'LineWidth',lw)
+plot(tt,gammas(1:ii,4,2),'LineWidth',lw)
+plot(tt,gammas(1:ii,4,3),'LineWidth',lw)
+% plot(tt,gammas(1:ii,4,4),'LineWidth',lw)
+% plot(tt,gammas(1:ii,jj,4),'LineWidth',lw)
+% for jj = 1:nAgents
+%     plot(tt,gammas(1:ii,jj,1),'LineWidth',lw)
+%     plot(tt,gammas(1:ii,jj,2),'LineWidth',lw)
+%     plot(tt,gammas(1:ii,jj,3),'LineWidth',lw)
+%     plot(tt,gammas(1:ii,jj,4),'LineWidth',lw)
+% end
+legend('\gamma_1','\gamma_2','\gamma_3')%,'\gamma_1','\gamma_1','\gamma_1')
+hold off
+
+figure(6);
+title('aVals')
+hold on
+for jj = 1:nAgents
+    plot(tt,avalues(1:ii,jj),'LineWidth',lw)
+end
+legend('a_1','a_2','a_3','a_4')
+hold off
+
+figure(7);
+title('bVals')
+hold on
+for jj = 1:nAgents
+    plot(tt,bvalues(1:ii,jj),'LineWidth',lw)
+end
+legend('a_1','a_2','a_3','a_4')
+hold off
+
 % Load road geometry
 road_file = 'datastore/geometry/road_markings.mat';       
 load(road_file)
-
+%%
 moviename = erase(filename,'.mat');
 cinematographer(dt,x(1:(ii),:,:),obstacles,moviename)
 

@@ -3,13 +3,12 @@ function [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,Aeq,beq,LB,UB)
 % Default values
 sol      = [];
 fval     = 0;
-exitflag = 0;
 
-% Enforce strict inequalities
-strict_tol = 1e-4;
-b          = b  - strict_tol;
-LB         = LB + strict_tol;
-UB         = UB - strict_tol;
+% % Enforce strict inequalities
+% strict_tol = 1e-4;
+% b          = b  - strict_tol;
+% LB         = LB + strict_tol;
+% UB         = UB - strict_tol;
 
 %   Detailed explanation goes here
 model.modelsense = 'min';
@@ -31,8 +30,13 @@ params.BarHomogeneous = -1;
 params.NumericFocus   =  0;
 
 % Solve optimization problem
-result = gurobi(model, params);
-status = result.status;
+try
+    result = gurobi(model, params);
+    status = result.status;
+catch ME
+    disp(ME.message)
+    rethrow(ME)
+end
 
 if strcmp(status, 'OPTIMAL')
     % Extract solution info

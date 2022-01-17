@@ -1,5 +1,5 @@
 % function [A,b,h,v00,h00] = get_ffcbf_safety_constraints_dynamic_rpcca(t,x,settings)
-function [A,b,params] = get_ffcbf_safety_constraints_dynamic_rpcca(t,x,settings)
+function [A,b,params] = get_ffcbf_safety_constraints_dynamic_ccs(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -342,13 +342,8 @@ for aa = 1:Na
         dvy = vay - viy;
         
         % Solve for minimizer of h
-        kh       = 1000.0;
         kh       = 100.0;
-%         kh       = 50.0;
-%         kh       = 1.0;
-%         kh       = 10.0;
         tmax     = 1.0;
-%         tmax     = 1.25;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -369,10 +364,6 @@ for aa = 1:Na
         aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
         ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
         
-%         % Assume no other agent control -- EXPERIMENTAL
-%         axi_con(idx_ii) = [0; 0]';
-%         ayi_con(idx_ii) = [0; 0]'; 
-        
         % dax and day
         dax_unc = (axa_unc - axi_unc)*x_scale;
         day_unc =  aya_unc - ayi_unc;
@@ -388,108 +379,36 @@ for aa = 1:Na
         Heavy_dot2_con   = dheavyside(tau_star,kh,tmax)*tau_star_dot_con;
         tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
-
-        % Exp const
-        ke = 1.0;
-        ke = 10.0;
-        ke = 2.0;
-%         ke = 100.0;
-%         ke = 3.0;
         
         % h and hdot (= Lfh + Lgh*u)
         h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
         Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+%         alpha0_h = h^3;
+        alpha0_h = 10*h;
 
-        % MODIFICATIONS
-        Lgh(idx_ii) = (1 - exp(-ke*h))*Lgh(idx_ii);
-        Lfh = exp(-ke*h)*Lfh;
-
-            
-
-%         % PCCA Contribution
-%         Lfh = Lfh + wHat(AAA,idx_aa)*Lgh(idx_aa)' + wHat(AAA,idx_ii)*Lgh(idx_ii)';
-
-        % RPCA Worst Case Control action
-        pWorst = exp(-ke*h);
+        % Class K Function
+        u0  = zeros(size(Lgh,2),1);
         if aa == AAA
-            if h00(ii) == 0
-                worst_beta  = -sign(Lgh(idx_ii(1)))*4*pi;
-                worst_acc   = -sign(Lgh(idx_ii(2)))*9.81;
-                v00(idx_ii) = pWorst*[worst_beta; worst_acc];
-                h00(ii)     = h;
-            end
-        elseif ii == AAA
-            if h00(aa) == 0
-                worst_beta  = -sign(Lgh(idx_aa(1)))*4*pi;
-                worst_acc   = -sign(Lgh(idx_aa(2)))*9.81;
-                v00(idx_aa) = pWorst*[worst_beta; worst_acc];
-                h00(aa)     = h;
-            end
+            u0((-1:0)+AAA*Nu) = uNom;
         end
 
-        % Default worst-case control action
-        uMax        = [4*pi;  9.81];
-        worst_beta  = -sign(Lgh(idx_ii(1)))*uMax(1);
-        worst_acc   = -sign(Lgh(idx_ii(2)))*uMax(2);
-        uWorst      = pWorst*[worst_beta; worst_acc];
-        Phi         = abs(Lgh(idx_ii) * uWorst);
-        
-        % New rPCA
-        l0  = 0.01; % Experimental 1/2 robust scenario -- worked pretty well
-%         ke  = 0.5; % Experimental 1/2 robust scenario -- worked pretty well
-%         ke  = 5.0; % Experimental 1/2 robust scenario -- worked pretty well
+        uMax = [4*pi; 9.81; 4*pi; 9.81];
+        uaa  = u0(idx_aa);
+        uii  = u0(idx_ii);
+        u0_filtered = filter_nominal_control([uaa; uii],uMax,Lfh,Lgh(idx_aa),alpha0_h);
+        u0(idx_aa) = u0_filtered(1:2);
+        u0(idx_ii) = u0_filtered(3:4);
 
-%         if sum(isinf(Lgh)) > 0
-%             disp(Lgh)
-%         end
-% %         % Compute parameter for class k function
-%         if Lfh + h < 0
-%             classk_settings = struct('Nu',Nu,'ke',ke,'knom',l0,'Phi',Phi);
-%             [kk,kcode]  = compute_class_k([uNom; pWorst*uWorst],uWorst,repmat(uMax,2,1),h,Lfh,[Lgh(idx_aa) Lgh(idx_ii)],classk_settings);
-%             if kcode == 1
-%                 disp('Class K Issue')
-%             elseif isnan(kk)
-%     %             kk = l0;
-%                 kk = max([l0,2*(-Lfh + Phi*exp(-ke*h))/h]);
-%             else
-%     %                 kk
-%             end
-%         else
-%             kk = max([l0,2*(-Lfh + Phi*exp(-ke*h))/h]);
-%         end
-
-        kk = 5.0; % Works, but cuts it close
-        kk = 1.0; % Works
+        Kh  = max([-Lfh - Lgh*u0,h]);
+%         k0  = 1;
+%         K   = max([1/max([h,eps])*(-Lfh - Lgh*u0),k0]);
 
         Aw  = [Aw; -Lgh];
-        bw  = [bw; Lfh + kk*h - Phi*exp(-ke*h)]; 
+%         bw  = [bw; Lfh + K*h]; 
+        bw  = [bw; Lfh + Kh]; 
         hw  = [hw; min(h,(dx^2 + dy^2 - (2*sw)^2))];
 
-%         % h and hdot (= Lfh + Lgh*u) -- Standard CBF
-%         h    = dx^2 + dy^2 - sw^2;
-%         Lfh  = 2*dx*dvx + 2*dy*dvy;
-%         Lf2h = 2*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-%         LgLf = 2*(dx*dax_con + dy*day_con);
-% 
-%         % PCCA Contribution
-%         Lf2h = Lf2h + wHat(AAA,idx_aa)*LgLf(idx_aa)' + wHat(AAA,idx_ii)*LgLf(idx_ii)';
-% 
-%         % RPCCA Worst Case Control action
-%         if ii == AAA
-%             worst_beta  = 0;
-%             worst_acc   = -sign(LgLf(idx_aa(2)))*9.81;
-%             v00(idx_aa) = [worst_beta; worst_acc];
-%             h00(aa)     = h;
-%         end
-%     
-%         l1 = 40.0;
-%         l1 = 30.0;
-%         l0 = l1^2 / 4;
-%         
-%         Aw = [Aw; -LgLf];
-%         bw = [bw; Lf2h + l1*Lfh + l0*h];
-%         Hw = [hw; h];
     end
     
     A = [A; Aw];

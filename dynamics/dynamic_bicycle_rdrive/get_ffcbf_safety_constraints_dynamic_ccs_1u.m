@@ -1,57 +1,59 @@
-function [A,b,params] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,settings)
+function [A,b,params] = get_ffcbf_safety_constraints_dynamic_ccs_1u(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
 Lf = 1.0;
 
 % Unpack PCCA Settings
-% agent = settings.AAA;
+agent = settings.AAA;
 Na    = settings.Na;
 
 % Add additional settings
-settings.('Nu')   = 1;
+settings.('Nu')   = 2;
 settings.('Lr')   = Lr;
 settings.('Lf')   = Lf;
 settings.('lw')   = 3.0;
 
-% A = []; b = []; h = [];
-v00 = zeros(Na*settings.Nu,1);
-h00 = inf*ones(Na,1);
-
-nConstraints = 9;
-A = zeros(nConstraints*Na,settings.Nu*Na);
-b = zeros(nConstraints*Na,1);
-h = zeros(nConstraints*Na,1);
+A = []; b = []; h = [];
 
 for aa = 1:Na
     
     settings.('aa') = aa;
     
-    [A1,b1,h1]         = get_speed_constraints(t,x,settings);
-    [A2,b2,h2]         = get_road_constraints(t,x,settings);
-    [A4,b4,h4,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
-
-%     if aa < 4
-%         [A3,b3,h3] = get_intersection_constraints(t,x,settings);
-%     else
-%         A3 = []; b3 = []; h3 = 100;
-%     end
-
-    row_idx = nConstraints*(aa-1)+1:nConstraints*(aa-1)+nConstraints;
-    A(row_idx,:) = [A1; A2; A4];
-    b(row_idx)   = [b1; b2; b4];
-    h(row_idx)   = [h1; h2; h4];
-
-%     A = [A; A1; A2; A4];
-%     b = [b; b1; b2; b4];
-%     h = [h; h1; h2; h4];
+    [A1,b1,h1] = get_speed_constraints(t,x,settings);
+    [A2,b2,h2] = get_road_constraints(t,x,settings);
+    if aa < 4
+        [A3,b3,h3] = get_intersection_constraints(t,x,settings);
+    else
+        A3 = []; b3 = []; h3 = 100;
+    end
+    A = [A; A1; A2; A3];
+    b = [b; b1; b2; b3];
+    
+    if aa == agent
+        h = [h; h1; h2; h3];
+    end
     
 end
+
+v00 = zeros(Na*settings.Nu,1);
+h00 = inf*ones(Na,1);
+if agent < 5
+    [A4,b4,h4,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
+
+    A = [A; A4];
+    b = [b; b4];
+    h = [h; h4];
+end
+
+
+
 
 % Organize parameters to be returned
 params = struct('h',   h,   ...
                 'v00', v00, ...
                 'h00', h00);
+
 
 end
 
@@ -61,17 +63,17 @@ lw = settings.lw;
 Lr = settings.Lr;
 
 xx = x(aa,:);
-A = zeros(2,4); b = ones(2,1);
+A = []; b = [];
 
 % vx and vy
 vx = xx(4)*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
 vy = xx(4)*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 
 % ax and ay
-ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
-ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
-ax_con = [-xx(4)*sin(xx(3))*sec(xx(5))^2; cos(xx(3))-sin(xx(3))*tan(xx(5))]';
-ay_con = [ xx(4)*cos(xx(3))*sec(xx(5))^2; sin(xx(3))+cos(xx(3))*tan(xx(5))]';
+ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5))) - betadot*xx(4)*sin(xx(3))*sec(xx(5))^2;
+ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5))) + betadot*xx(4)*cos(xx(3))*sec(xx(5))^2;
+ax_con = [cos(xx(3))-sin(xx(3))*tan(xx(5))]';
+ay_con = [sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
 % l1 = 5.0;
 % l0 = 10.0;
@@ -80,7 +82,7 @@ l1 = 5.0;
 l0 = l1^2 / 4;
 settings.('l1') = l1;
 settings.('l0') = l0;
-h = 999*ones(2,1);
+h = 999;
 
 
 if xx(1) < lw && xx(1) > -lw && xx(2) < lw && xx(2) > -lw
@@ -266,6 +268,7 @@ b = round(b,12);
 end
 
 function [A,b,h] = get_speed_constraints(t,x,settings)
+run('physical_params.m')
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
@@ -273,9 +276,9 @@ Na = settings.Na;
 idx    = (-1:0)+aa*Nu;
 xx     = x(aa,:);
 
-h      = settings.SL - xx(4);
+h      = SL - xx(4);
 Lfh    = 0;
-Lgh    = [0 -1];
+Lgh    = [-1];
 
 A      = zeros(1,Nu*Na);
 A(idx) = -Lgh;
@@ -289,35 +292,32 @@ end
 function [A,b,H,v00,h00] = get_collision_avoidance_constraints(t,x,settings)
 Nu    = settings.Nu;
 Na    = settings.Na;
-% Nn    = settings.Nn;
+Nn    = settings.Nn;
 Lr    = settings.Lr;
-% AA    = settings.aa;
-% AAA   = settings.AAA;
-% uNom  = settings.uNom;
+AA    = settings.aa;
+AAA   = settings.AAA;
+% wHat  = settings.wHat;
+uNom  = settings.uNom;
 
-% sl = 1.0;
+sl = 1.0;
 sw = 1.0;
 
-Nc  = factorial(Na-1);
-A   = zeros(Nc,8);
-b   = zeros(Nc,1);
-H   = zeros(Nc,1);
+A = []; b = []; H = [];
 v00 = zeros(Nu*Na,1);
 h00 = zeros(Na,1);
-cc  = 1;
 
 % Loop through every scheduled agent for PCCA
 for aa = 1:Na
     
-%     Aw = []; bw = []; hw = [];
-    nc = Na-aa;
-    Aw = zeros(nc,8);
-    bw = zeros(nc,1);
-    hw = zeros(nc,1);
-    dd = 1;
+    Aw = []; bw = []; hw = [];
     
     % Loop through all other agents for interagent completeness
-    for ii = aa+1:Na
+    for ii = (Na-Nn+1):Na
+        
+        % Do not consider self in interagent safety
+        if ii == aa
+            continue
+        end
         
         xa = x(aa,:);
         xi = x(ii,:);
@@ -347,18 +347,18 @@ for aa = 1:Na
         tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
 
         % accelerations -- controlled (con) and uncontrolled (unc)
-        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
-        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
-        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
-        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
+        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5))) - betadot*xa(4)*sin(xa(3))*sec(xa(5))^2;
+        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5))) - betadot*xi(4)*sin(xi(3))*sec(xi(5))^2;
+        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot*xa(4)*cos(xa(3))*sec(xa(5))^2;
+        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot*xi(4)*cos(xi(3))*sec(xi(5))^2;
         axa_con = zeros(1,Na*Nu);
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
         ayi_con = zeros(1,Na*Nu);
-        axa_con(idx_aa) = [-xa(4)*sin(xa(3))*sec(xa(5))^2; cos(xa(3))-sin(xa(3))*tan(xa(5))]';
-        axi_con(idx_ii) = [-xi(4)*sin(xi(3))*sec(xi(5))^2; cos(xi(3))-sin(xi(3))*tan(xi(5))]';
-        aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
-        ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
+        axa_con(idx_aa) = [cos(xa(3))-sin(xa(3))*tan(xa(5))]';
+        axi_con(idx_ii) = [cos(xi(3))-sin(xi(3))*tan(xi(5))]';
+        aya_con(idx_aa) = [sin(xa(3))+cos(xa(3))*tan(xa(5))]';
+        ayi_con(idx_ii) = [sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
         
         % dax and day
         dax_unc = axa_unc - axi_unc;
@@ -367,8 +367,8 @@ for aa = 1:Na
         day_con = aya_con - ayi_con;
         
         % taudot
-        tau_star_dot_unc = -(dax_unc*(2*dvx*tau_star + dx) + day_unc*(2*dvy*tau_star + dy) + (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
-        tau_star_dot_con = -(dax_con*(2*dvx*tau_star + dx) + day_con*(2*dvy*tau_star + dy)) / (dvx^2 + dvy^2 + eps);
+        tau_star_dot_unc = (dax_unc*(2*dvx*tau_star - dx) + day_unc*(2*dvy*tau_star - dy) - (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
+        tau_star_dot_con = (dax_con*(2*dvx*tau_star - dx) + day_con*(2*dvy*tau_star - dy)) / (dvx^2 + dvy^2 + eps);
         Heavy_dot1_unc   = dheavyside(tau_star,kh,0)*tau_star_dot_unc;
         Heavy_dot2_unc   = dheavyside(tau_star,kh,tmax)*tau_star_dot_unc;
         Heavy_dot1_con   = dheavyside(tau_star,kh,0)*tau_star_dot_con;
@@ -380,24 +380,35 @@ for aa = 1:Na
         h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
         Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+        alpha0_h = 10*h;
 
         % Class K Function
-        kk = 10.0;
-    
-        % Inequalities: Ax <= b
-        Aw(dd,:) = -Lgh;
-        bw(dd)   = Lfh + kk*h; 
-        hw(dd)   = min(h,(dx^2 + dy^2 - (2*sw)^2));
+        u0  = zeros(size(Lgh,2),1);
+        if aa == AAA
+            u0((-1:0)+AAA*Nu) = uNom;
+        end
 
-        dd = dd + 1;
+        uMax = [4*pi; 9.81; 4*pi; 9.81];
+        uaa  = u0(idx_aa);
+        uii  = u0(idx_ii);
+        u0_filtered = filter_nominal_control([uaa; uii],uMax,Lfh,Lgh(idx_aa),alpha0_h);
+        u0(idx_aa) = u0_filtered(1:2);
+        u0(idx_ii) = u0_filtered(3:4);
+
+        Kh  = max([-Lfh - Lgh*u0,h]);
+%         k0  = 1;
+%         K   = max([1/max([h,eps])*(-Lfh - Lgh*u0),k0]);
+
+        Aw  = [Aw; -Lgh];
+%         bw  = [bw; Lfh + K*h]; 
+        bw  = [bw; Lfh + Kh]; 
+        hw  = [hw; min(h,(dx^2 + dy^2 - (2*sw)^2))];
 
     end
     
-    A(cc:cc+(nc-1),:) = Aw;
-    b(cc:cc+(nc-1))   = bw;
-    H(cc:cc+(nc-1))   = hw;
-
-    cc = cc + nc;
+    A = [A; Aw];
+    b = [b; bw];
+    H = [H; hw];
     
 end
 

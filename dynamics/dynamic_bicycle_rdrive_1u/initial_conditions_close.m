@@ -30,6 +30,24 @@ x2       = [-hlw  far  -pi/2 5.0 0];
 x3       = [ far  hlw     pi 5.0 0];
 x4       = [-far -hlw      0 5.0 0];
 
+% Identical initial conditions
+x1       = [ hlw -far   pi/2 5.0 0];
+x2       = [-hlw  far  -pi/2 5.0 0];
+x3       = [ far  hlw     pi 5.0 0];
+x4       = [-far -hlw      0 5.0 0];
+
+% Blue Ahead
+x1       = [ hlw -far+2   pi/2 5.0 0];
+x2       = [-hlw  far  -pi/2 5.0 0];
+x3       = [ far  hlw     pi 5.0 0];
+x4       = [-far -hlw      0 5.0 0];
+
+% % Pure Test
+% x1       = [ hlw -3.5   pi/2 1.0 0];
+% x2       = [-hlw  far  -pi/2 5.0 0];
+% x3       = [ far  hlw     pi 5.0 0];
+% x4       = [-1.5 -hlw      0 1.0 0];
+
 % x1       = [ hlw -far+1   pi/2 5.1 0];
 % x2       = [-hlw  far-2  -pi/2 5.2 0];
 % x3       = [ far-1  hlw     pi 4.9 0];
@@ -68,11 +86,12 @@ xGoal{3} = [-(far^2) hlw];
 xGoal{4} = [ far^2  -hlw];
 
 % Segmented Paths -- time to complete each segment
-first_T  = 2.0;
+first_T  = 1.0;
 last_T   = 10.0;
 last_T   = 8.0;
 Tpath{1} = [first_T 1 3 1 last_T];
 Tpath{1} = [first_T 1 2 1 last_T];
+Tpath{1} = [first_T 0.5 1.5 0.5 last_T];
 Tpath{2} = [first_T last_T];
 Tpath{3} = [first_T last_T];
 Tpath{2} = [last_T];

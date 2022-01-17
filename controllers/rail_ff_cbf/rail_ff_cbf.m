@@ -1,4 +1,4 @@
-function [data] = ff_cbf(t,x,settings)
+function [data] = rail_ff_cbf(t,x,settings)
 %pcca - Controller based on Predictive Collision Avoidance Algorithm (pcca)
 %The foundation of this controller is a distributed CBF-QP control scheme
 %in which an ego agent solves for the inputs for the other agents in
@@ -53,12 +53,16 @@ cost     = @safe_pcca;
 % Organize parameters
 Na  = size(x,1);
 Nn  = 1;
+Nd  = Na*(Nu + Nn); % Number of decision variables
 
 % Initialize variables
 u      = zeros(Na,Nu);
 uNom   = zeros(Na,Nu);
 mincbf = zeros(Na,1);
-sols   = zeros(Na,Nu*Na);
+sols   = zeros(Na,Nd);
+gamma_sols = zeros(Na,4);
+avalue = zeros(Na,1);
+bvalue = zeros(Na,1);
 
 % Assign tslots
 tSlots = assign_tslots(t,x,tSlots);
@@ -67,7 +71,7 @@ for aa = 1:Na
     % PCCA Control Variables
     sat_vec  = [umax(1); umax(2)];
     ctrl_idx = (-1:0)+aa*Nu;
-    u00      = zeros(Nu*Na,1);
+    u00      = zeros(Nd,1);
         
     % Configure path settings for nominal controller
     r           = settings.r;
@@ -79,35 +83,39 @@ for aa = 1:Na
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 
-    % Control Constraints
-    LB  = -repmat([umax(1); umax(2)],Na,1);
-    UB  =  repmat([umax(1); umax(2)],Na,1);
+    % Generate nominal reciprocal values -- measure of momentum
+    vels   = abs(x(:,4));
+    gammas = vels ./ (vels + vels(Na)); % This works for one Nn agent, not more
+%     gammas = 1 - vels ./ (vels + vels(Na)); % This works for one Nn agent, not more
+    u00(Na*Nu+1:end) = gammas;
 
-    % Class K Functions -- alpha(B) = a*B
-    Ak  = [];
-    bk  = [];
+    % Control Constraints
+    LB  = [-repmat([umax(2)],Na,1); repmat([-Inf],size(gammas,1),1)];
+    UB  = [ repmat([umax(2)],Na,1); repmat([Inf],size(gammas,1),1)];
+
+%     % Control Constraints
+%     LB  = -repmat([umax(2)],Na,1);
+%     UB  =  repmat([umax(2)],Na,1);
     
     % Safety-Compensating PCCA Control
-    pcca_settings = struct('Na',     Na,   ...
-                           'Nn',     Nn,   ...
-                           'AAA',    aa,   ...
-                           'wHat',   wHat, ...
-                           'uNom',   u0,   ...
+    pcca_settings = struct('Na',     Na,     ...
+                           'Nn',     Nn,     ...
+                           'AAA',    aa,     ...
+                           'bdot',   u0(1),  ...
+                           'vEst',   uLast,  ...
+                           'uNom',   u0,     ...
+                           'gammas', gammas, ...
                            'tSlots', tSlots);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic(t,x,pcca_settings);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_solo(t,x,pcca_settings);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,pcca_settings);
+    [As,bs,params] = get_ffcbf_safety_constraints_dynamic_ccs_1u_gamma(t,x,pcca_settings);
 
-    [As,bs,params] = get_ffcbf_safety_constraints_dynamic_ccs(t,x,pcca_settings);
-    
     % Load Optimization Cost Fcn
-    cost_settings = struct('Nu',  Nu*Na,          ...
-                           'q',   repmat(q,Na,1), ...
-                           'idx', ctrl_idx,       ...
-                           'k',   1.0);
+    cost_settings = struct('Nu',  Nd-(Na*Nu/2),          ...
+                           'q',   [repmat(qu(2:2:end),Na,1); repmat(qg,Na,1)], ...
+                           'idx', aa,       ...
+                           'k',   1.0 ./ params.h00);
 %     [Q,p] = min_diff_nominal(u00,repmat(q,Na,1),Nu*Na,0,Ns);
-     u00  = u00 + params.v00;
-    [Q,p] = safe_pcca(u00,cost_settings);
+     uCost  = [u00(2:2:Na*Nu)+params.v00; u00(Na*Nu+1:end)];
+    [Q,p] = safe_pcca(uCost,cost_settings);
 
     A = As;
     b = bs;
@@ -130,16 +138,19 @@ for aa = 1:Na
         return
     end
            
-    u(aa,:)     = sol(ctrl_idx);
+    u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u0;
     mincbf(aa)  = min([params.h; 100]);
-    sols(aa,:)  = sol;
+    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',3/2*size(sol,1),1);
+    gamma_sols(aa,:) = sol(5:end);
+    avalue(aa) = params.avalue;
+    bvalue(aa) = params.bvalue;
 
 end
 
 % Determine new values for wHat: wHat_ij = u_jj - u_ij
-wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols;
+wHat = 0;%repmat(reshape(u',1,Na*Nu),Na,1) - sols;
 
 % Configure relevant variables for logging
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);
@@ -149,9 +160,12 @@ cbf   = mincbf;
 data = struct('u',      u,      ...
               'uLast',  uLast,  ...
               'sols',   sols, ...
+              'gamma_sols',   gamma_sols, ...
               'cbf',    cbf,    ...
               'wHat',   wHat,   ...
               'uNom',   uNom,   ...
+              'avalue', avalue, ...
+              'bvalue', bvalue, ...
               'tSlots', tSlots);
 
 

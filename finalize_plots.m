@@ -17,7 +17,7 @@ timestepN = 1044;
 dtimestep  = 200;
 nAgents    = 4;
 
-load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpcca.mat')
+load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpca.mat')
 % figure('DefaultAxesFontSize',big_font_size);
 % title('XY Trajectories'); xlabel('X (m)'); ylabel('Y (m)');
 hold on;
@@ -246,7 +246,9 @@ saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T1_scbf_p
 clf; close all;
 timestepN  = 5000;
 timestepS1 = 1;
-timestepS1 = 1650;
+timestepS1 = 1150;
+timestepS1 = 2000;
+timestepS1 = 4000;
 % timestepS1 = 3000;
 % timestepS1 = 4000;
 dtimestep  = 200;
@@ -258,13 +260,13 @@ for oo = 1:length(obstacles)
 end
 
 
-load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpcca.mat')
+load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpca.mat')
 lw = 6.0;
 mksz  = 10.0;
 big_font_size = 36;
 maxXdim = 15;
 maxYdim = 12;
-title('FF-CBF w/ rPCA','FontSize',big_font_size); 
+% title('FF-CBF w/ rPCA','FontSize',big_font_size); 
 xlabel('X (m)','FontSize',big_font_size); 
 ylabel('Y (m)','FontSize',big_font_size);
 
@@ -334,9 +336,9 @@ set(gcf, 'Position', get(0, 'Screensize'));
 set(gca,'DataAspectRatio',[1 1 1],...
         'PlotBoxAspectRatio',[1 1 1])
 % saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T0_ffcbf_rpca.eps','epsc')
-saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T1_ffcbf_rpca.eps','epsc')
+% saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T1_ffcbf_rpca.eps','epsc')
 % saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T2_ffcbf_rpca.eps','epsc')
-% saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T3_ffcbf_rpca.eps','epsc')
+saveas(gcf,'datastore/dynamic_bicycle_rdrive/real_ones/XY_Trajectories_T3_ffcbf_rpca.eps','epsc')
 
 
 %% Control Plots rPCA
@@ -355,14 +357,11 @@ hold on;
 % end
 
 
-load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpcca.mat')
+load('datastore/dynamic_bicycle_rdrive/real_ones/ff_cbf_4intersection_rpca.mat')
 hold on
 lw = 6.0;
 mksz  = 10.0;
 big_font_size = 36;
-% maxXdim = 15;
-% maxYdim = 12;
-% title('FF-CBF w/ rPCA','FontSize',big_font_size); 
 subplot(211)
 title('FF-CBF w/ rPCA','FontSize',big_font_size); 
 % xlabel('t (sec)','FontSize',big_font_size); 

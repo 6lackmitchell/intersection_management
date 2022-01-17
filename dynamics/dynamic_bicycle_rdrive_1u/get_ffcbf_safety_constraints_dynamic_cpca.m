@@ -1,4 +1,4 @@
-function [A,b,params] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,settings)
+function [A,b,params] = get_ffcbf_safety_constraints_dynamic_cpca(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -70,8 +70,8 @@ vy = xx(4)*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 % ax and ay
 ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
-ax_con = [-xx(4)*sin(xx(3))*sec(xx(5))^2; cos(xx(3))-sin(xx(3))*tan(xx(5))]';
-ay_con = [ xx(4)*cos(xx(3))*sec(xx(5))^2; sin(xx(3))+cos(xx(3))*tan(xx(5))]';
+ax_con = [cos(xx(3))-sin(xx(3))*tan(xx(5))]';
+ay_con = [sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
 % l1 = 5.0;
 % l0 = 10.0;
@@ -113,23 +113,24 @@ function [A,b,h] = get_SENEroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
-idx = (-1:0)+aa*Nu;
+idx = aa;
 
-h1       = lw - x(1);
+h1       = (lw-R) - x(1);
 Lfh1     = -vx;
 Lf2h1    = -ax_unc;
 LgLf1    = -ax_con;
 
-h2       = x(1);
+h2       = x(1) - R;
 Lfh2     = vx;
 Lf2h2    = ax_unc;
 LgLf2    = ax_con;
@@ -152,23 +153,24 @@ function [A,b,h] = get_ESWSroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
-idx = (-1:0)+aa*Nu;
+idx = aa;
 
-h1       = lw + x(2);
+h1       = (lw-R) + x(2);
 Lfh1     = vy;
 Lf2h1    = ay_unc;
 LgLf1    = ay_con;
 
-h2       = -x(2);
+h2       = -x(2) - R;
 Lfh2     = -vy;
 Lf2h2    = -ay_unc;
 LgLf2    = -ay_con;
@@ -191,23 +193,24 @@ function [A,b,h] = get_ENWNroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
-idx = (-1:0)+aa*Nu;
+idx = aa;
 
-h1       = lw - x(2);
+h1       = (lw-R) - x(2);
 Lfh1     = -vy;
 Lf2h1    = -ay_unc;
 LgLf1    = -ay_con;
 
-h2       = x(2);
+h2       = x(2) - R;
 Lfh2     = vy;
 Lf2h2    = ay_unc;
 LgLf2    = ay_con;
@@ -230,23 +233,24 @@ function [A,b,h] = get_NWSWroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
-idx = (-1:0)+aa*Nu;
+idx = aa;
 
-h1       = lw + x(1);
+h1       = (lw-R) + x(1);
 Lfh1     = vx;
 Lf2h1    = ax_unc;
 LgLf1    = ax_con;
 
-h2       = -x(1);
+h2       = -x(1) - R;
 Lfh2     = -vx;
 Lf2h2    = -ax_unc;
 LgLf2    = -ax_con;
@@ -270,12 +274,12 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 
-idx    = (-1:0)+aa*Nu;
+idx    = aa;
 xx     = x(aa,:);
 
 h      = settings.SL - xx(4);
 Lfh    = 0;
-Lgh    = [0 -1];
+Lgh    = [-1];
 
 A      = zeros(1,Nu*Na);
 A(idx) = -Lgh;
@@ -291,6 +295,7 @@ Nu    = settings.Nu;
 Na    = settings.Na;
 % Nn    = settings.Nn;
 Lr    = settings.Lr;
+tmax  = settings.lookahead;
 % AA    = settings.aa;
 % AAA   = settings.AAA;
 % uNom  = settings.uNom;
@@ -298,8 +303,9 @@ Lr    = settings.Lr;
 % sl = 1.0;
 sw = 1.0;
 
+% A = []; b = []; H = [];
 Nc  = factorial(Na-1);
-A   = zeros(Nc,8);
+A   = zeros(Nc,Na*Nu);
 b   = zeros(Nc,1);
 H   = zeros(Nc,1);
 v00 = zeros(Nu*Na,1);
@@ -311,7 +317,7 @@ for aa = 1:Na
     
 %     Aw = []; bw = []; hw = [];
     nc = Na-aa;
-    Aw = zeros(nc,8);
+    Aw = zeros(nc,Na*Nu);
     bw = zeros(nc,1);
     hw = zeros(nc,1);
     dd = 1;
@@ -322,8 +328,8 @@ for aa = 1:Na
         xa = x(aa,:);
         xi = x(ii,:);
         
-        idx_aa = (-1:0)+aa*Nu;
-        idx_ii = (-1:0)+ii*Nu;
+        idx_aa = aa;
+        idx_ii = ii;
               
         % dx and dy
         dx  = xa(1) - xi(1);
@@ -339,7 +345,7 @@ for aa = 1:Na
         
         % Solve for minimizer of h
         kh       = 100.0;
-        tmax     = 1.0;
+%         tmax     = 1.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -355,10 +361,10 @@ for aa = 1:Na
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
         ayi_con = zeros(1,Na*Nu);
-        axa_con(idx_aa) = [-xa(4)*sin(xa(3))*sec(xa(5))^2; cos(xa(3))-sin(xa(3))*tan(xa(5))]';
-        axi_con(idx_ii) = [-xi(4)*sin(xi(3))*sec(xi(5))^2; cos(xi(3))-sin(xi(3))*tan(xi(5))]';
-        aya_con(idx_aa) = [ xa(4)*cos(xa(3))*sec(xa(5))^2; sin(xa(3))+cos(xa(3))*tan(xa(5))]';
-        ayi_con(idx_ii) = [ xi(4)*cos(xi(3))*sec(xi(5))^2; sin(xi(3))+cos(xi(3))*tan(xi(5))]'; 
+        axa_con(idx_aa) = cos(xa(3))-sin(xa(3))*tan(xa(5));
+        axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5));
+        aya_con(idx_aa) = sin(xa(3))+cos(xa(3))*tan(xa(5));
+        ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5)); 
         
         % dax and day
         dax_unc = axa_unc - axi_unc;
@@ -382,7 +388,8 @@ for aa = 1:Na
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
 
         % Class K Function
-        kk = 10.0;
+%         kk = 10.0;
+        kk = 5.0;
     
         % Inequalities: Ax <= b
         Aw(dd,:) = -Lgh;
@@ -428,25 +435,25 @@ elseif xx(1) > 0 && xx(1) < lw && xx(2) < -lw
     h    = -xx(2) - lw;
     Lfh  = -(xx(4)*sin(xx(3)) + xx(4)*cos(xx(3))*tan(xx(5)));
     Lf2h = -(xx(4)^2/Lr * (cos(xx(3))*tan(xx(5)) - sin(xx(3))*tan(xx(5))^2));
-    LgLf = -[0 sin(xx(3)) + cos(xx(3))*tan(xx(5))];
+    LgLf = -sin(xx(3)) - cos(xx(3))*tan(xx(5));
 
 elseif xx(2) > 0 && xx(2) < lw && xx(1) > lw
     h    = xx(1) - lw;
     Lfh  = xx(4)*cos(xx(3)) - xx(4)*sin(xx(3))*tan(xx(5));
     Lf2h = xx(4)^2/Lr * (sin(xx(3))*tan(xx(5)) - cos(xx(3))*tan(xx(5))^2);
-    LgLf = [0 cos(xx(3)) - sin(xx(3))*tan(xx(5))];
+    LgLf = cos(xx(3)) - sin(xx(3))*tan(xx(5));
 
 elseif xx(1) < 0 && xx(1) > -lw && xx(2) > lw
     h    = xx(2) - lw;
     Lfh  = xx(4)*sin(xx(3)) + xx(4)*cos(xx(3))*tan(xx(5));
     Lf2h = xx(4)^2/Lr * (cos(xx(3))*tan(xx(5)) - sin(xx(3))*tan(xx(5))^2);
-    LgLf = [0 sin(xx(3)) + cos(xx(3))*tan(xx(5))];
+    LgLf = sin(xx(3)) + cos(xx(3))*tan(xx(5));
 
 elseif xx(2) < 0 && xx(2) > -lw && xx(1) < -lw
     h    = -xx(1) - lw;
     Lfh  = -(xx(4)*cos(xx(3)) - xx(4)*sin(xx(3))*tan(xx(5)));
     Lf2h = -(xx(4)^2/Lr * (sin(xx(3))*tan(xx(5)) - cos(xx(3))*tan(xx(5))^2));
-    LgLf = -[0 cos(xx(3)) - sin(xx(3))*tan(xx(5))];
+    LgLf = -cos(xx(3)) + sin(xx(3))*tan(xx(5));
 else
     disp(t)
     return
@@ -467,8 +474,6 @@ function [A,b] = get_intersection_constraint(idx,h,Lfh,Lf2h,LgLf,Nu,Na)
 % l1 = 25.0;
 
 % Experimental
-l1 = 1.0;
-l1 = 0.1;
 l1 = 2.0;
 l0 = l1^2 / 4;
 

@@ -12,9 +12,12 @@ maxYdim = 30;
 % Plotting params
 theta = 0:2*pi/101:2*pi;
 RR    = 0.6;
+RR    = 1.0;
 
 % Physical Params
 L = 0.85;
+L = 0.0;
+% L = 1.0;
 
 % Make the movie object
 mov = struct('cdata', [], 'colormap', []);
@@ -54,17 +57,17 @@ for ii=1:1:nAgents
     cx2 = x(1,ii,1) - L/2*cos(x(1,ii,3));
     cy2 = x(1,ii,2) - L/2*sin(x(1,ii,3));
 
-    ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
-    ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+    ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
+    ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
 
     if ii < 4
-        ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
-        ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+        ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
+        ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
     else
-        ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
-        ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
-        ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
-        ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+        ox1a = cx1 + (RR/2)*wrapToPi(theta)/pi; oy1a = cy1 + (RR/2)*wrapToPi(theta)/pi;
+        ox1b = cx1 - (RR/2)*wrapToPi(theta)/pi; oy1b = cy1 + (RR/2)*wrapToPi(theta)/pi;
+        ox2a = cx2 + (RR/2)*wrapToPi(theta)/pi; oy2a = cy2 + (RR/2)*wrapToPi(theta)/pi;
+        ox2b = cx2 - (RR/2)*wrapToPi(theta)/pi; oy2b = cy2 + (RR/2)*wrapToPi(theta)/pi;
         
         ox1  = [ox1a ox1b];
         oy1  = [oy1a oy1b];
@@ -79,7 +82,7 @@ end
 txt = strcat('t = ',num2str(0.0),' sec');
 text(10,10,txt,'FontSize',14)
 axis([-maxXdim maxXdim -maxYdim maxYdim]);
-hold off
+% hold off
 drawnow update
 mov= getframe(gcf);
 
@@ -97,7 +100,7 @@ end
 for tt=1:(1/(50*dt)):maxsteps
 
     clf
-    set(gcf, 'Position', position)
+%     set(gcf, 'Position', position)
     hold on
     for oo = 1:length(obstacles)
         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
@@ -109,16 +112,16 @@ for tt=1:(1/(50*dt)):maxsteps
         cy2 = x(tt,ii,2) - L/2*sin(x(tt,ii,3));
 
         if ii < 4
-            ox1 = cx1 + RR*cos(theta); oy1 = cy1 + RR*sin(theta);
-            ox2 = cx2 + RR*cos(theta); oy2 = cy2 + RR*sin(theta);
+            ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
+            ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
         else
 %             ox1 = cx1 + sqrt(2)*RR*wrapToPi(theta)/pi; oy1 = cy1 + sqrt(2)*RR*wrapToPi(theta)/pi;
 %             ox2 = cx2 + sqrt(2)*RR*wrapToPi(theta)/pi; oy2 = cy2 + sqrt(2)*RR*wrapToPi(theta)/pi;
             
-            ox1a = cx1 + RR*wrapToPi(theta)/pi; oy1a = cy1 + RR*wrapToPi(theta)/pi;
-            ox1b = cx1 - RR*wrapToPi(theta)/pi; oy1b = cy1 + RR*wrapToPi(theta)/pi;
-            ox2a = cx2 + RR*wrapToPi(theta)/pi; oy2a = cy2 + RR*wrapToPi(theta)/pi;
-            ox2b = cx2 - RR*wrapToPi(theta)/pi; oy2b = cy2 + RR*wrapToPi(theta)/pi;
+            ox1a = cx1 + (RR/2)*wrapToPi(theta)/pi; oy1a = cy1 + (RR/2)*wrapToPi(theta)/pi;
+            ox1b = cx1 - (RR/2)*wrapToPi(theta)/pi; oy1b = cy1 + (RR/2)*wrapToPi(theta)/pi;
+            ox2a = cx2 + (RR/2)*wrapToPi(theta)/pi; oy2a = cy2 + (RR/2)*wrapToPi(theta)/pi;
+            ox2b = cx2 - (RR/2)*wrapToPi(theta)/pi; oy2b = cy2 + (RR/2)*wrapToPi(theta)/pi;
 
             ox1  = [ox1a ox1b];
             oy1  = [oy1a oy1b];

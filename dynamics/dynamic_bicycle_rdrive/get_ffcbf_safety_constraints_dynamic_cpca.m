@@ -1,4 +1,4 @@
-function [A,b,params] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,settings)
+function [A,b,params] = get_ffcbf_safety_constraints_dynamic_cpca(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -9,7 +9,7 @@ Lf = 1.0;
 Na    = settings.Na;
 
 % Add additional settings
-settings.('Nu')   = 1;
+settings.('Nu')   = 2;
 settings.('Lr')   = Lr;
 settings.('Lf')   = Lf;
 settings.('lw')   = 3.0;
@@ -19,7 +19,7 @@ v00 = zeros(Na*settings.Nu,1);
 h00 = inf*ones(Na,1);
 
 nConstraints = 9;
-A = zeros(nConstraints*Na,settings.Nu*Na);
+A = zeros(nConstraints*Na,8);
 b = zeros(nConstraints*Na,1);
 h = zeros(nConstraints*Na,1);
 
@@ -61,7 +61,7 @@ lw = settings.lw;
 Lr = settings.Lr;
 
 xx = x(aa,:);
-A = zeros(2,4); b = ones(2,1);
+A = zeros(2,8); b = ones(2,1);
 
 % vx and vy
 vx = xx(4)*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
@@ -113,23 +113,24 @@ function [A,b,h] = get_SENEroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
 idx = (-1:0)+aa*Nu;
 
-h1       = lw - x(1);
+h1       = (lw-R) - x(1);
 Lfh1     = -vx;
 Lf2h1    = -ax_unc;
 LgLf1    = -ax_con;
 
-h2       = x(1);
+h2       = x(1) - R;
 Lfh2     = vx;
 Lf2h2    = ax_unc;
 LgLf2    = ax_con;
@@ -152,23 +153,24 @@ function [A,b,h] = get_ESWSroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
 idx = (-1:0)+aa*Nu;
 
-h1       = lw + x(2);
+h1       = (lw-R) + x(2);
 Lfh1     = vy;
 Lf2h1    = ay_unc;
 LgLf1    = ay_con;
 
-h2       = -x(2);
+h2       = -x(2) - R;
 Lfh2     = -vy;
 Lf2h2    = -ay_unc;
 LgLf2    = -ay_con;
@@ -191,23 +193,24 @@ function [A,b,h] = get_ENWNroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
 idx = (-1:0)+aa*Nu;
 
-h1       = lw - x(2);
+h1       = (lw-R) - x(2);
 Lfh1     = -vy;
 Lf2h1    = -ay_unc;
 LgLf1    = -ay_con;
 
-h2       = x(2);
+h2       = x(2) - R;
 Lfh2     = vy;
 Lf2h2    = ay_unc;
 LgLf2    = ay_con;
@@ -230,23 +233,24 @@ function [A,b,h] = get_NWSWroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
 idx = (-1:0)+aa*Nu;
 
-h1       = lw + x(1);
+h1       = (lw-R) + x(1);
 Lfh1     = vx;
 Lf2h1    = ax_unc;
 LgLf1    = ax_con;
 
-h2       = -x(1);
+h2       = -x(1) - R;
 Lfh2     = -vx;
 Lf2h2    = -ax_unc;
 LgLf2    = -ax_con;
@@ -298,6 +302,7 @@ Lr    = settings.Lr;
 % sl = 1.0;
 sw = 1.0;
 
+% A = []; b = []; H = [];
 Nc  = factorial(Na-1);
 A   = zeros(Nc,8);
 b   = zeros(Nc,1);
@@ -467,8 +472,6 @@ function [A,b] = get_intersection_constraint(idx,h,Lfh,Lf2h,LgLf,Nu,Na)
 % l1 = 25.0;
 
 % Experimental
-l1 = 1.0;
-l1 = 0.1;
 l1 = 2.0;
 l0 = l1^2 / 4;
 
