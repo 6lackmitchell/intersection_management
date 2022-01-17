@@ -12,6 +12,24 @@ x3       = [ far  hlw     pi 5.0 0];
 x4       = [-far -hlw      0 5.0 0];
 x4       = [-far+1.5 -hlw      0 5.0 0];
 
+x1       = [ hlw     -far+0.5   pi/2 6.0 0];
+x2       = [-hlw      far+0.5  -pi/2 5.0 0];
+x3       = [ far-1    hlw         pi 4.0 0];
+x4       = [-far+1.5 -hlw          0 5.0 0];
+x4       = [-far+3.0 -hlw          0 5.0 0];
+
+% Blue Behind
+x1       = [ hlw -far   pi/2 5.0 0];
+x2       = [-hlw  far  -pi/2 5.0 0];
+x3       = [ far  hlw     pi 5.0 0];
+x4       = [-far -hlw      0 7.5 0];
+
+% Blue Ahead
+x1       = [ hlw -far   pi/2 5.0 0];
+x2       = [-hlw  far  -pi/2 5.0 0];
+x3       = [ far  hlw     pi 5.0 0];
+x4       = [-far -hlw      0 5.0 0];
+
 % x1       = [ hlw -far+1   pi/2 5.1 0];
 % x2       = [-hlw  far-2  -pi/2 5.2 0];
 % x3       = [ far-1  hlw     pi 4.9 0];
@@ -25,6 +43,7 @@ x4       = [-far+1.5 -hlw      0 5.0 0];
 % x5       = [-55.0 -hlw    0 5 0];
 % x6       = [ 45.0  hlw   pi 5 0];
 x0       = [x1; x2; x3; x4];%; x5; x6];%; x7; x8; x9; x10];
+% x0       = [x1; x4];%; x5; x6];%; x7; x8; x9; x10];
 nAgents  = size(x0,1);
 nStates  = size(x0,2);
               
@@ -44,17 +63,25 @@ xGoal{4} = [-lw     -hlw;
 %              far^2  -hlw];
 % xGoal{6} = [ lw      hlw;
 %             -(far^2) hlw];
+xGoal{2} = [-hlw    -(far^2)]; 
+xGoal{3} = [-(far^2) hlw];
+xGoal{4} = [ far^2  -hlw];
 
 % Segmented Paths -- time to complete each segment
 first_T  = 2.0;
 last_T   = 10.0;
+last_T   = 8.0;
+Tpath{1} = [first_T 1 3 1 last_T];
 Tpath{1} = [first_T 1 2 1 last_T];
 Tpath{2} = [first_T last_T];
 Tpath{3} = [first_T last_T];
+Tpath{2} = [last_T];
+Tpath{3} = [last_T];
 
 % % Experimental
 Tpath{4} = [first_T last_T];
 Tpath{4} = [first_T 1];
+Tpath{4} = [last_T];
 
 
 Tpath{5} = [6 6];
@@ -65,6 +92,9 @@ Rpath{1} = [0 0 1.5 0 0];
 Rpath{2} = [0 0];
 Rpath{3} = [0 0];
 Rpath{4} = [0 0];
+Rpath{2} = [0];
+Rpath{3} = [0];
+Rpath{4} = [0];
 Rpath{5} = [0 0];
 Rpath{6} = [0 0];
 
@@ -73,8 +103,16 @@ path{1}  = {'linear', 'linear', 'circular_left', 'linear', 'linear'};
 path{2}  = {'linear', 'linear'};
 path{3}  = {'linear', 'linear'};
 path{4}  = {'linear', 'linear'};
+path{2}  = {'linear'};
+path{3}  = {'linear'};
+path{4}  = {'linear'};
 path{5}  = {'linear', 'linear'};
 path{6}  = {'linear', 'linear'};
+
+% xGoal{2} = [ far^2  -hlw];
+% Tpath{2} = [last_T];
+% Rpath{2} = [0];
+% path{2}  = {'linear'};
 
 gidx     = ones(size(x0,1),1);
 xg       = zeros(size(x0,1),size(xGoal,3));

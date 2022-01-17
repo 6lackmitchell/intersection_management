@@ -25,8 +25,10 @@ function [tSlots] = assign_tslots(t,x,tSlots)
 % July 2021; Last revision: 13-July-2021
 %------------- BEGIN CODE --------------
 
-T_min = 4;
-crossing_time = 6;
+% T_min = 4;
+% T_min = 0.5;
+T_min = 0.0;
+crossing_time = 3;
 
 % intersection_map = struct('N',[[-1.5, 3.0];[ 1.5, 3.0]],...
 %                           'S',[[ 1.5,-3.0];[-1.5,-3.0]],...

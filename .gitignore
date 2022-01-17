@@ -8,7 +8,7 @@
 *.mov
 *.avi
 *.mp4
-*.mat
 *.fig
 **/.DS_Store
 *.svg
+*initial_tracking_conditions*
