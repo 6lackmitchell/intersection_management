@@ -388,8 +388,8 @@ for aa = 1:Na
         Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
 
         % Class K Function
-%         kk = 10.0;
-        kk = 5.0;
+%         kk = 1.5;
+        kk = 20;
     
         % Inequalities: Ax <= b
         Aw(dd,:) = -Lgh;

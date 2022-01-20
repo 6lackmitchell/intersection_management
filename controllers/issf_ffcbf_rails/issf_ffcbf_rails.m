@@ -1,4 +1,4 @@
-function [data] = ff_cbf_cpca_rails(t,x,settings,params)
+function [data] = issf_ffcbf_rails(t,x,settings,params)
 %ff_cbf_cpca - Controller based on Centralized Priority-Cost Allocation (cpca)
 %Need to update the remainder:
 %
@@ -156,7 +156,7 @@ for aa = 1:Na
     end
 
     % Safety Constraints -- Same for comm. and noncomm.
-    [As,bs,safety_params] = get_ffcbf_safety_constraints_dynamic_cpca(t,x,safety_settings);
+    [As,bs,safety_params] = get_issf_ffcbf_safety_constraints(t,x,safety_settings);
 
     
 
