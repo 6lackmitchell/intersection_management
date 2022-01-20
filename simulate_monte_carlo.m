@@ -20,7 +20,7 @@ clc; clear; close all; restoredefaultpath;
 mode           = "Centralized Priority-Cost Allocation";
 % dyn_mode       = "dynamic_bicycle_rdrive";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
-con_mode       = "ff_cbf_cpca_rails";
+con_mode       = "issf_ffcbf_rails";
 cost_mode      = "costs";
 im_used        = 0;
 
@@ -54,7 +54,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions_cpca.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 1000;
+nTrials        = 100;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -73,6 +73,7 @@ controller = str2func(con_mode);
 %% Execute Monte Carlo Simulation
 tic
 parfor nn = 1:nTrials
+% for nn = 1:nTrials
 
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath);
@@ -96,84 +97,25 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/fcfs_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/issf_monte_carlo/fcfs_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
 save(filename)
-
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_baseline_staticpriority_for.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/without_past/ff_cbf_cpca_4MonteCarlo1000_wealthredistribution_parfor.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_richgetricher_parfor.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_lowvel_highpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_highvel_highpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_lowDfromCenter_highpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_highDfromCenter_highpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive/monte_carlo/without_past/ff_cbf_cpca_4MonteCarlo1000_highDfromCenter_highpriority.mat'
-
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_baseline_staticpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_lowdev_highpri.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_alpha5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_lowvel_highpriority.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_4MonteCarlo1000_highvel_highpriority.mat'
-
-
-
-
-
-% %% Plot Simulation Results
-% ii = fix(t / dt);
-% tt = linspace(dt,ii*dt,ii);
-% filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
-
-
 
 %% Analyze Throughput Results
 % 01.13.2022
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T0p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T1.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T1p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T1p5_redo.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T2.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T3.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_highdev_highpri_T5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_intersection_tests.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf_cpca_rails_4MonteCarlo1000_deviation_lowdev_highpri.mat'
-
-% Alpha Tests
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a1.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a1p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2p75.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3p25.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a4.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_alpha_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a10.mat'
-
-% Lookahead Tests
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_T0p1.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a1p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a2p75.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3p25.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a3p5.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a4.mat'
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a5.mat'
 % to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a10.mat'
-% % 
 % load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
+vvios   = zeros(nTrials,1);
+pvios   = zeros(nTrials,1);
 infeas  = zeros(nTrials,1);
 endtime = zeros(nTrials,1);
 for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
     infeas(nn)  = trial_data(nn).t < 5;
     endtime(nn) = trial_data(nn).t;
+    vvios(nn)   = sum(trial_data(nn).vios(:,1,1)) > 0;
+    pvios(nn)   = sum(trial_data(nn).vios(:,1,2)) > 0;
 end
 
 sortedTTI  = sort(TTI);
@@ -186,8 +128,11 @@ fraction_unfinished = 1 - fraction_finished;
 fraction_infeasible = sum(infeas) / nTrials;
 fraction_feasible   = 1 - fraction_infeasible
 
-mean_all = mean(finished,'all')
-mean_endtime = mean(endtime(find(infeas==1))) % Mean endtime of infeasible sims
+fraction_virt_vio   = sum(vvios) / nTrials
+fraction_phys_vio   = sum(pvios) / nTrials
+
+mean_all            = mean(finished,'all')
+mean_endtime        = mean(endtime(find(infeas==1))) 
 
 %% Miscellaneous Helper Functions
 function trial_data = run_one_trial(trial_setup)
@@ -215,7 +160,9 @@ SL         = misc_params.SL;
 
 x          = zeros(nTimesteps,nAgents,nStates);
 u          = zeros(nTimesteps,nAgents,nControls);
+sols       = zeros(nTimesteps,nAgents,nAgents*nControls+factorial(nAgents-1));
 priority   = zeros(nTimesteps,nAgents);
+violations = zeros(nTimesteps,nAgents,2);
 x(1,:,:)   = x0;
 
 % More Settings
@@ -318,12 +265,14 @@ for ii = 1:nTimesteps
 
         % Organize data
         u(ii,:,:)       = data.u;
+        sols(ii,:,:)    = data.sols;
         uLast           = data.uLast;
 %         safety(ii,:)    = data.cbf;
         tSlots          = data.tSlots;
 %         uNom(ii,:,:)    = data.uNom;
         wHat            = data.wHat;
         priority(ii,:)  = data.prior;
+        violations(ii,:) = [data.v_vio; data.p_vio]';
 
     catch ME
 %         disp(ME)
@@ -344,13 +293,17 @@ trial_data = struct('success', success,   ...
                     'TTI',     thru_time, ...
                     'x',       x,         ...  
                     'u',       u,         ...
-                    't',       t);
+                    't',       t,         ...
+                    'sols',    sols,      ...
+                    'vios',    violations);
 
 end
 
 function ret = data_content(nTimesteps,nAgents,nStates)
 ret = struct('success', 0,                                 ...
              'TTI',     Inf*ones(nAgents,1),               ...
+             'sols',    zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
+             'vios',    zeros(nTimesteps,nAgents,2),       ...
              'x',       zeros(nTimesteps,nAgents,nStates), ...  
              'u',       zeros(nTimesteps,nAgents,2),       ...
              't',       0);

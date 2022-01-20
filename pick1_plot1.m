@@ -1,17 +1,23 @@
-data = trial_data(992);
-data = trial_data(968);
+find(infeas==1)
+clf;
+
+data = trial_data(98);
 t = data.t;
 dt = 0.01;
 x = data.x;
 u = data.u;
-
-
+sols = data.sols;
+violations = data.vios;    
 
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
 
 filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
+for jj = 1:nAgents
+    vvios = sum(violations(:,jj,1))
+    pvios = sum(violations(:,jj,2))
+end
 
 figure(2);
 title('Control Inputs X')
@@ -32,6 +38,27 @@ for jj = 1:nAgents
 end
 legend('a_1','a_2','a_3','a_4','a_5','a_6')
 hold off
+
+figure(4);
+title('Slack Variables')
+hold on
+for jj = 1:nAgents
+    for ss = 1:factorial(nAgents-1)
+        plot(tt,sols(1:ii,jj,nAgents*nControls+ss),'LineWidth',lw)
+    end
+end
+legend('\delta_1','\delta_2','\delta_3','\delta_4','\delta_5','\delta_6')
+hold off
+
+% figure(4);
+% title('Violations')
+% hold on
+% for jj = 1:nAgents
+%     vvios = sum(violations(:,jj,1))
+%     pvios = sum(violations(:,jj,2))
+% end
+% legend('\delta_1','\delta_2','\delta_3','\delta_4','\delta_5','\delta_6')
+% hold off
 
 % figure(4);
 % title('CBFs')

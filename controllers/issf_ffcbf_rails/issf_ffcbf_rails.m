@@ -45,9 +45,10 @@ Nu       = params.Nu;
 umax     = params.umax;
 
 % Organize parameters
-Na  = size(x,1); % Number of agents
-Nn  = settings.Nn;         % Number of noncommunicating agents
-Nd  = Na*Nu;     % Number of decision variables
+Na  = size(x,1);       % Number of agents
+Nn  = settings.Nn;     % Number of noncommunicating agents
+Ns  = factorial(Na-1); % Number of slack variables
+Nd  = Na*Nu + Ns;      % Number of decision variables
 
 % Initialize variables
 u          = zeros(Na,Nu);
@@ -57,15 +58,17 @@ sols       = zeros(Na,Nd);
 % gamma_sols = zeros(Na,4);
 % avalue     = zeros(Na,1);
 % bvalue     = zeros(Na,1);
-u00        = zeros(Nd,1);
+u00        = zeros(Na*Nu,1);
 sat_vec    = [umax(1); umax(2)];  
-LyapunovFunc = zeros(Na,1);
+% LyapunovFunc = zeros(Na,1);
+virt_violations = zeros(Na,1);
+phys_violations = zeros(Na,1);
 
 % Assign tslots
 tSlots = assign_tslots(t,x,tSlots);
 
 % Get priorities
-power = 10;
+power = 5;
 
 % Assign priority array
 priority = zeros(Na,1);
@@ -83,10 +86,10 @@ LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
 
 % FCFS (based on speed)
 if t == 0.01
-    priority(idxLF(1)) = power^1; % Rich get richer
-    priority(idxLF(2)) = power^2;
-    priority(idxLF(3)) = power^3;
-    priority(idxLF(4)) = power^4;
+    priority(idxLF(1)) = power^0; % Rich get richer
+    priority(idxLF(2)) = power^1;
+    priority(idxLF(3)) = power^2;
+    priority(idxLF(4)) = power^3;
 else
     priority(1) = prior(1);
     priority(2) = prior(2);
@@ -98,14 +101,14 @@ end
 %     priority(2) = power^2;
 %     priority(3) = power^1;
 %     priority(4) = power^4;
-%     priority(idxLF(1)) = power^4; % Rich get richer
-%     priority(idxLF(2)) = power^3;
-%     priority(idxLF(3)) = power^2;
-%     priority(idxLF(4)) = power^1;
-%     priority(idxLF(1)) = power^1; % Wealth Redistribution
+%     priority(idxLF(1)) = power^3; % Rich get richer
 %     priority(idxLF(2)) = power^2;
-%     priority(idxLF(3)) = power^3;
-%     priority(idxLF(4)) = power^4;
+%     priority(idxLF(3)) = power^1;
+%     priority(idxLF(4)) = power^0;
+%     priority(idxLF(1)) = power^0; % Wealth Redistribution
+%     priority(idxLF(2)) = power^1;
+%     priority(idxLF(3)) = power^2;
+%     priority(idxLF(4)) = power^3;
 
 prior = priority;
 
@@ -127,7 +130,7 @@ for aa = 1:Na
     ctrl_idx = aa;
     
     % Safety-Compensating Decentralized Adaptive Reciprocal Control
-    uCost         = u00(2:2:Na*Nu);
+    uCost         = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
 %     lookahead     = 0.0;
 %     lookahead     = 0.1;
 %     lookahead     = 0.25;
@@ -142,6 +145,7 @@ for aa = 1:Na
 %     lookahead     = 1.5;
     safety_settings = struct('Na',        Na,          ...
                              'Nn',        Nn,          ...
+                             'Ns',        Ns,          ...
                              'SL',        settings.SL, ...
                              'AAA',       aa,          ...
                              'vEst',      uLast,       ...
@@ -160,15 +164,16 @@ for aa = 1:Na
 
     
 
-    
-
-    cost_settings = struct('Nu',    Na*1,                      ...
-                           'q',     repmat(params.qu(2),Na,1), ...
-                           'idx',   ctrl_idx,                  ...
+    d = 1e1;%power^(Na+1);
+    q = [repmat(params.qu(2),Na,1); repmat(d,Ns,1)];
+    cost_settings = struct('Nu',    Na*(Nu-1) + Ns, ...
+                           'Na',    Na,               ...
+                           'q',     q,                ...
+                           'idx',   ctrl_idx,         ...
                            'k',     priority);
     [Q,p] = priority_cost(uCost,cost_settings);
-    LB    = -repmat([umax(2)],Na,1);
-    UB    =  repmat([umax(2)],Na,1);
+    LB    = [-repmat([umax(2)],Na,1); zeros(Ns,1)];
+    UB    = [ repmat([umax(2)],Na,1); 100*ones(Ns,1)];
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
@@ -180,11 +185,21 @@ for aa = 1:Na
         rethrow(ME)
     end
     
-    if exitflag ~= 2
+    if exitflag ~= 2 % Not success
         disp(t);
         disp(exitflag);
         disp(aa)
         disp('Error');
+        return
+    end
+
+    ia_virt_cbf = safety_params.h(end-Ns:end);
+    ia_phys_cbf = safety_params.h0(end-Ns:end);
+
+    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+    if phys_violations(aa) > 0
+        disp('Physical Barrier Violated')
         return
     end
            
@@ -192,7 +207,7 @@ for aa = 1:Na
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u0;
     mincbf(aa)  = min([safety_params.h; 100]);
-    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',2*size(sol,1),1);
+    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',Na*Nu+Ns,1);
 %     gamma_sols(aa,:) = sol(9:end);
 %     avalue(aa) = safety_params.avalue;
 %     bvalue(aa) = safety_params.bvalue;
@@ -218,7 +233,9 @@ data = struct('u',      u,      ...
 ...%               'avalue', avalue, ...
 ...%               'bvalue', bvalue, ...
               'tSlots', tSlots, ...
-              'prior',  prior);
+              'prior',  prior,  ...
+              'v_vio', virt_violations, ...
+              'p_vio', phys_violations);
 
 
 end

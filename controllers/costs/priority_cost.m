@@ -3,14 +3,15 @@ function [Q,p] = priority_cost(u_nom,settings)
 % Unpack settings
 q      = settings.q;
 Nu     = settings.Nu;
+Na     = settings.Na;
 k      = settings.k;
 
 % Cost Fcn: J = (x^T * Q * x) + (p * x) 
-Q = [eye(Nu).*q(1:Nu)];
+Q = [eye(length(q)).*q];
 p = [-2*ones(Nu,1).*u_nom.*q(1:Nu)];
 
 for ii = 1:length(p)
-    if ii <= 8
+    if ii <= Na
 %         % Nu = 2
 %         Q(ii,ii) = k(ceil(ii/2))*Q(ii,ii);
 %         p(ii)    = k(ceil(ii/2))*p(ii);
