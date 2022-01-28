@@ -97,12 +97,20 @@ toc
 beep
 
 %% Save Simulation Results
+<<<<<<< HEAD
 filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/energy_based/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_NC_intersection_tests.mat');
+=======
+filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/high_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
+>>>>>>> 6c5c128 (testing more)
 save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
+<<<<<<< HEAD
 % to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/normal_cbf/high_deviation/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
+=======
+% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/high_deviation/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
+>>>>>>> 6c5c128 (testing more)
 % load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
@@ -126,8 +134,13 @@ fraction_finished   = length(finished) / (nAgents*nTrials)
 fraction_unfinished = 1 - fraction_finished;
 
 fraction_infeasible = sum(infeas) / nTrials;
+<<<<<<< HEAD
 fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
 
+=======
+
+fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
+>>>>>>> 6c5c128 (testing more)
 fraction_feasible   = 1 - fraction_infeasible
 
 % fraction_virt_vio   = sum(vvios) / nTrials

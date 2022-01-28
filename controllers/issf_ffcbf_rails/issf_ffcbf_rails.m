@@ -77,15 +77,24 @@ priority = zeros(Na,1);
 xdot = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
 % LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
+<<<<<<< HEAD
 % LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
 % [~,idxLF] = sort(LyapunovFunc,'ascend');
+=======
+LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
+[~,idxLF] = sort(LyapunovFunc,'ascend');
+>>>>>>> 6c5c128 (testing more)
 
 % %     LyapunovFunc(aa) = 1/2*norm(settings.r(aa,:) - x(aa,1:2))^2 + 1/2*norm(settings.rdot(aa,:) - [xdot ydot])^2; % Deviation from nominal trajectory
 %     LyapunovFunc(aa) = 1/2*norm([xdot ydot])^2; % Speed
 % %     LyapunovFunc(aa) = 1/2*norm(x(aa,1:2))^2; % Distance from intersection center
 
 
+<<<<<<< HEAD
 % % FCFS (based on speed) -- Static
+=======
+% % FCFS (based on speed)
+>>>>>>> 6c5c128 (testing more)
 % if t == 0.01
 %     priority(idxLF(1)) = power^0; % Rich get richer
 %     priority(idxLF(2)) = power^1;
@@ -106,10 +115,10 @@ ydot = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
 %     priority(idxLF(2)) = power^2;
 %     priority(idxLF(3)) = power^1;
 %     priority(idxLF(4)) = power^0;
-%     priority(idxLF(1)) = power^0; % Wealth Redistribution
-%     priority(idxLF(2)) = power^1;
-%     priority(idxLF(3)) = power^2;
-%     priority(idxLF(4)) = power^3;
+    priority(idxLF(1)) = power^0; % Wealth Redistribution
+    priority(idxLF(2)) = power^1;
+    priority(idxLF(3)) = power^2;
+    priority(idxLF(4)) = power^3;
 
 
 
