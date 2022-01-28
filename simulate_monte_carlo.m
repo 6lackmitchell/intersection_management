@@ -25,8 +25,8 @@ cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
-% addpath '/Library/gurobi912/mac64/matlab'; % For mac
-addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
+addpath '/Library/gurobi912/mac64/matlab'; % For mac
+% addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
@@ -54,7 +54,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions_cpca.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 100;
+nTrials        = 500;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -97,13 +97,13 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/issf_monte_carlo/fcfs_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/fcfs_static_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
 save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/fully_centralized_lookahead_tests/ff_cbf_cpca_rails_4MonteCarlo1000_centralized_a10.mat'
-% load(to_load);
+to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/fcfs_static_speed/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
+load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
 vvios   = zeros(nTrials,1);
@@ -112,10 +112,10 @@ infeas  = zeros(nTrials,1);
 endtime = zeros(nTrials,1);
 for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
-    infeas(nn)  = trial_data(nn).t < 5;
+    infeas(nn)  = trial_data(nn).code == 0;
     endtime(nn) = trial_data(nn).t;
-    vvios(nn)   = sum(trial_data(nn).vios(:,1,1)) > 0;
-    pvios(nn)   = sum(trial_data(nn).vios(:,1,2)) > 0;
+    vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
+    pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
 end
 
 sortedTTI  = sort(TTI);
@@ -263,16 +263,25 @@ for ii = 1:nTimesteps
         % Compute control input
         data         = controller(t,xx,settings,u_params);
 
-        % Organize data
-        u(ii,:,:)       = data.u;
-        sols(ii,:,:)    = data.sols;
-        uLast           = data.uLast;
-%         safety(ii,:)    = data.cbf;
-        tSlots          = data.tSlots;
-%         uNom(ii,:,:)    = data.uNom;
-        wHat            = data.wHat;
-        priority(ii,:)  = data.prior;
-        violations(ii,:) = [data.v_vio; data.p_vio]';
+        if data.code == 1
+
+            % Organize data
+            u(ii,:,:)       = data.u;
+            sols(ii,:,:)    = data.sols;
+            uLast           = data.uLast;
+    %         safety(ii,:)    = data.cbf;
+            tSlots          = data.tSlots;
+    %         uNom(ii,:,:)    = data.uNom;
+            wHat            = data.wHat;
+            priority(ii,:)  = data.prior;
+            violations(ii,:) = [data.v_vio; data.p_vio]';
+        elseif data.code == -1
+            violations(ii,:) = [data.v_vio; data.p_vio]';
+            break
+        else
+            data.code = 0;
+            break
+        end
 
     catch ME
 %         disp(ME)
@@ -289,24 +298,24 @@ for ii = 1:nTimesteps
 
 end
 
-trial_data = struct('success', success,   ...
-                    'TTI',     thru_time, ...
-                    'x',       x,         ...  
-                    'u',       u,         ...
-                    't',       t,         ...
-                    'sols',    sols,      ...
-                    'vios',    violations);
+trial_data = struct('code', data.code,   ...
+                    'TTI',  thru_time, ...
+                    'x',    x,         ...  
+                    'u',    u,         ...
+                    't',    t,         ...
+                    'sols', sols,      ...
+                    'vios', violations);
 
 end
 
 function ret = data_content(nTimesteps,nAgents,nStates)
-ret = struct('success', 0,                                 ...
-             'TTI',     Inf*ones(nAgents,1),               ...
-             'sols',    zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
-             'vios',    zeros(nTimesteps,nAgents,2),       ...
-             'x',       zeros(nTimesteps,nAgents,nStates), ...  
-             'u',       zeros(nTimesteps,nAgents,2),       ...
-             't',       0);
+ret = struct('code', 0,                                 ...
+             'TTI',  Inf*ones(nAgents,1),               ...
+             'sols', zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
+             'vios', zeros(nTimesteps,nAgents,2),       ...
+             'x',    zeros(nTimesteps,nAgents,nStates), ...  
+             'u',    zeros(nTimesteps,nAgents,2),       ...
+             't',    0);
 end
 
 function [x0_rand,Tpath] = randomize_ic(x0,Tpath)

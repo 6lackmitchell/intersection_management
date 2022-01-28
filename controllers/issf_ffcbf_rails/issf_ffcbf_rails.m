@@ -68,7 +68,7 @@ phys_violations = zeros(Na,1);
 tSlots = assign_tslots(t,x,tSlots);
 
 % Get priorities
-power = 5;
+power = 10;
 
 % Assign priority array
 priority = zeros(Na,1);
@@ -173,7 +173,7 @@ for aa = 1:Na
                            'k',     priority);
     [Q,p] = priority_cost(uCost,cost_settings);
     LB    = [-repmat([umax(2)],Na,1); zeros(Ns,1)];
-    UB    = [ repmat([umax(2)],Na,1); 100*ones(Ns,1)];
+    UB    = [ repmat([umax(2)],Na,1); 1*ones(Ns,1)];
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
@@ -184,22 +184,26 @@ for aa = 1:Na
         disp(ME.message)
         rethrow(ME)
     end
-    
-    if exitflag ~= 2 % Not success
+
+    if 0%exitflag == 3 && max(safety_params.h0) > 0
+        sol = [-umax(2)*ones(4,1); zeros(6,1)];
+    elseif exitflag ~= 2
         disp(t);
         disp(exitflag);
         disp(aa)
         disp('Error');
-        return
+        data = struct('code',exitflag);
+        return 
     end
 
-    ia_virt_cbf = safety_params.h(end-Ns:end);
-    ia_phys_cbf = safety_params.h0(end-Ns:end);
+    ia_virt_cbf = safety_params.h(end-(Ns-1):end);
+    ia_phys_cbf = safety_params.h0(end-(Ns-1):end);
 
     virt_violations(aa) = sum(find(ia_virt_cbf < 0));
     phys_violations(aa) = sum(find(ia_phys_cbf < 0));
     if phys_violations(aa) > 0
         disp('Physical Barrier Violated')
+        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations);
         return
     end
            
@@ -223,7 +227,8 @@ u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);
 cbf   = mincbf;
 
 % Organize data
-data = struct('u',      u,      ...
+data = struct('code',   1,      ...
+              'u',      u,      ...
               'uLast',  uLast,  ...
               'sols',   sols, ...
 ...%               'gamma_sols',   gamma_sols, ...

@@ -1,4 +1,4 @@
-function [A,b,params] = get_issf_ffcbf_safety_constraints(t,x,settings)
+function [A,b,params] = get_issf_ffcbf_safety_constraints_curve(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 %   The relevant CBFs are taken into account here.
 Lr = 1.0;
@@ -44,7 +44,7 @@ end
 
 [A4,b4,h4,h04,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
 
-row_idx = nCons*Na+1:nCons*Na+settings.Ns;
+row_idx = settings.Ns*Na+1:settings.Ns*Na+settings.Ns;
 
 A(row_idx,:) = A4;
 b(row_idx)   = b4;
@@ -312,12 +312,10 @@ Lr    = settings.Lr;
 tmax  = settings.lookahead;
 % AA    = settings.aa;
 % AAA   = settings.AAA;
-uNom  = settings.uNom;
+% uNom  = settings.uNom;
 
 % sl = 1.0;
 sw = 1.0;
-
-betadot = uNom(1:2:end);
 
 % A = []; b = []; H = [];
 Nc  = factorial(Na-1);
@@ -364,7 +362,7 @@ for aa = 1:Na
         
         % Solve for minimizer of h
         kh       = 100.0;
-%         tmax     = xa(4)/9.81; % Minimum stopping time %1.0;
+%         tmax     = 1.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -372,10 +370,10 @@ for aa = 1:Na
         tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
 
         % accelerations -- controlled (con) and uncontrolled (unc)
-        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5))) - betadot(aa)*xa(4)*sin(xa(3))*sec(xa(5))^2;
-        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5))) - betadot(ii)*xi(4)*sin(xi(3))*sec(xi(5))^2;
-        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
-        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
+        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
+        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
+        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
+        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
         axa_con = zeros(1,Na*Nu);
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
@@ -400,39 +398,31 @@ for aa = 1:Na
         Heavy_dot2_con   = dheavyside(tau_star,kh,tmax)*tau_star_dot_con;
         tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
-
-        % Class K Function(s)
-        l0   = 5.0;
-        l1   = sqrt(4*l0);
         
-        % h and hdot (= Lfh + Lgh*u)
+        % h0
         h0   = dx^2 + dy^2 - (2*sw)^2;
-        h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
-        Lfh0 = 2*dx*dvx + 2*dy*dvy;
-        Lfh  = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-        Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
-       
-%         % Standard CBF (Rel-Deg 2)
-%         H   = h0;
-%         LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
-%         LgH = 2*(dx*dax_con + dy*day_con);
 
-        % FF-CBF
-        H   = h;
-        LfH = Lfh;
-        LgH = Lgh;
+        % hT and hTdot
+        B    = 10; % scale factor
+        hT   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
+        LfhT = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
+        LghT = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
 
-%         % Robust-Virtual CBF
-%         alpha = 0.1;
-%         H     = h + alpha*h0;
-%         LfH   = Lfh + alpha*Lfh0;
-%         LgH   = Lgh;
+        % h and hdot
+        h    = hT + B*(xa(5)-xi(5))^2*(1 - exp(-B*tau));
+        Lfh  = LfhT + B*(xa(5)-xi(5))^2*(1+exp(-tau)*tau_dot_unc);
+        Lgh  = LghT + B*(xa(5)-xi(5))^2*(1+exp(-tau)*tau_dot_con);
+
+        % Class K Function
+%         kk = 1.5;
+        kk = 5;
+%         kk = 5*exp(max(abs(xa(5)),abs(xi(5)))); % Increase kk when one of the agents is turning
     
         % Inequalities: Ax <= b
-        Aw(dd,1:Na*Nu)  = -LgH;
-        Aw(dd,Na*Nu+ss) = -(0*l0)*(h0 - max(h,0));
-        bw(dd)          = LfH + l0*H; 
-        hw(dd)          = H;
+        Aw(dd,1:Na*Nu)  = -Lgh;
+        Aw(dd,Na*Nu+ss) = -(1*kk)*(h0 - h);
+        bw(dd)          = Lfh + kk*h; 
+        hw(dd)          = h;
         hw0(dd)         = h0;
 
         dd = dd + 1;

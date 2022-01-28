@@ -1,7 +1,9 @@
 find(infeas==1)
+find(pvios>0)
 clf;
 
-data = trial_data(98);
+data = trial_data(460);
+code = data.code;
 t = data.t;
 dt = 0.01;
 x = data.x;
@@ -15,8 +17,8 @@ tt = linspace(dt,ii*dt,ii);
 filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
 for jj = 1:nAgents
-    vvios = sum(violations(:,jj,1))
-    pvios = sum(violations(:,jj,2))
+    v_vios = sum(violations(:,jj,1))
+    p_vios = sum(violations(:,jj,2))
 end
 
 figure(2);

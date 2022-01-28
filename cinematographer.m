@@ -12,7 +12,7 @@ maxYdim = 30;
 % Plotting params
 theta = 0:2*pi/101:2*pi;
 RR    = 0.6;
-RR    = 1.0;
+RR    = 1.8; % This corresponds to a physical radius of 1 = RR/2
 
 % Physical Params
 L = 0.85;
@@ -60,7 +60,7 @@ for ii=1:1:nAgents
     ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
     ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
 
-    if ii < 4
+    if ii < 5
         ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
         ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
     else
@@ -111,7 +111,7 @@ for tt=1:(1/(50*dt)):maxsteps
         cx2 = x(tt,ii,1) - L/2*cos(x(tt,ii,3));
         cy2 = x(tt,ii,2) - L/2*sin(x(tt,ii,3));
 
-        if ii < 4
+        if ii < 5
             ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
             ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
         else
