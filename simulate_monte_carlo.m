@@ -25,8 +25,8 @@ cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
-addpath '/Library/gurobi912/mac64/matlab'; % For mac
-% addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
+% addpath '/Library/gurobi912/mac64/matlab'; % For mac
+addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
@@ -55,7 +55,7 @@ u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
 nTrials        = 500;
-nNon           = 0;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -97,13 +97,13 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/fcfs_static_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
+filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/energy_based/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_NC_intersection_tests.mat');
 save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
-to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/fcfs_static_speed/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
-load(to_load);
+% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/normal_cbf/high_deviation/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
+% load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
 vvios   = zeros(nTrials,1);
@@ -126,13 +126,15 @@ fraction_finished   = length(finished) / (nAgents*nTrials)
 fraction_unfinished = 1 - fraction_finished;
 
 fraction_infeasible = sum(infeas) / nTrials;
+fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
+
 fraction_feasible   = 1 - fraction_infeasible
 
-fraction_virt_vio   = sum(vvios) / nTrials
+% fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
 
 mean_all            = mean(finished,'all')
-mean_endtime        = mean(endtime(find(infeas==1))) 
+mean_endtime        = mean(endtime(find(infeas==1))); 
 
 %% Miscellaneous Helper Functions
 function trial_data = run_one_trial(trial_setup)
@@ -225,15 +227,15 @@ for ii = 1:nTimesteps
         % Consolidate path segment data and get trajectory info
         Tfxt(aa) = Tpath{aa}(gidx(aa));
 
-        % Adjust Tfxt according to priority
-        if ii > 1
-            [~,pIdx] = sort(priority(max(ii-1,1),1:(nAgents-nNon)),'descend');
-            if ismember(aa,1:(nAgents-nNon))
-                if gidx(aa) == 1
-                    Tfxt(aa) = Tfxt(aa) + (pIdx(aa) - 1);
-                end
-            end
-        end
+%         % Adjust Tfxt according to priority
+%         if ii > 1
+%             [~,pIdx] = sort(priority(max(ii-1,1),1:(nAgents-nNon)),'descend');
+%             if ismember(aa,1:(nAgents-nNon))
+%                 if gidx(aa) == 1
+%                     Tfxt(aa) = Tfxt(aa) + (pIdx(aa) - 1);
+%                 end
+%             end
+%         end
 
         settings = struct('T',    Tfxt(aa),             ...
                           't0',   t0(aa),               ...

@@ -2,7 +2,7 @@ find(infeas==1)
 find(pvios>0)
 clf;
 
-data = trial_data(460);
+data = trial_data(482);
 code = data.code;
 t = data.t;
 dt = 0.01;

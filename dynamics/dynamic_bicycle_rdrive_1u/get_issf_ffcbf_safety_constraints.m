@@ -402,7 +402,7 @@ for aa = 1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = 5.0;
+        l0   = 10.0;
         l1   = sqrt(4*l0);
         
         % h and hdot (= Lfh + Lgh*u)

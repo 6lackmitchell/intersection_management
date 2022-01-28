@@ -76,26 +76,27 @@ priority = zeros(Na,1);
 % Compute values for priority metrics
 xdot = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
-LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
-[~,idxLF] = sort(LyapunovFunc,'ascend');
+% LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
+% LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
+% [~,idxLF] = sort(LyapunovFunc,'ascend');
 
 % %     LyapunovFunc(aa) = 1/2*norm(settings.r(aa,:) - x(aa,1:2))^2 + 1/2*norm(settings.rdot(aa,:) - [xdot ydot])^2; % Deviation from nominal trajectory
 %     LyapunovFunc(aa) = 1/2*norm([xdot ydot])^2; % Speed
 % %     LyapunovFunc(aa) = 1/2*norm(x(aa,1:2))^2; % Distance from intersection center
 
 
-% FCFS (based on speed)
-if t == 0.01
-    priority(idxLF(1)) = power^0; % Rich get richer
-    priority(idxLF(2)) = power^1;
-    priority(idxLF(3)) = power^2;
-    priority(idxLF(4)) = power^3;
-else
-    priority(1) = prior(1);
-    priority(2) = prior(2);
-    priority(3) = prior(3);
-    priority(4) = prior(4);
-end
+% % FCFS (based on speed) -- Static
+% if t == 0.01
+%     priority(idxLF(1)) = power^0; % Rich get richer
+%     priority(idxLF(2)) = power^1;
+%     priority(idxLF(3)) = power^2;
+%     priority(idxLF(4)) = power^3;
+% else
+%     priority(1) = prior(1);
+%     priority(2) = prior(2);
+%     priority(3) = prior(3);
+%     priority(4) = prior(4);
+% end
 
 %     priority(1) = power^3; % Static Priority
 %     priority(2) = power^2;
@@ -110,7 +111,7 @@ end
 %     priority(idxLF(3)) = power^2;
 %     priority(idxLF(4)) = power^3;
 
-prior = priority;
+
 
 % Generate Nominal Control Inputs
 for aa = 1:Na
@@ -122,6 +123,30 @@ for aa = 1:Na
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 end
+
+% Generate "Energy"-based Priority Metric
+lookahead     = 1.0;
+safety_settings = struct('Na',        Na,          ...
+                         'Nn',        Nn,          ...
+                         'Ns',        Ns,          ...
+                         'SL',        settings.SL, ...
+                         'AAA',       aa,          ...
+                         'vEst',      uLast,       ...
+                         'uNom',      u00,         ...
+                         'tSlots',    tSlots,      ...
+                         'lookahead', lookahead);
+% Safety Constraints -- Same for comm. and noncomm.
+[As,bs,safety_params] = get_issf_ffcbf_safety_constraints(t,x,safety_settings);
+
+Lgh = As(end-(Ns-1):end,1:Na);
+LyapunovFunc = 1/2*sum(Lgh.^2);
+[~,idxLF] = sort(LyapunovFunc,'ascend');
+priority(idxLF(1)) = power^3; % Rich get richer
+priority(idxLF(2)) = power^2;
+priority(idxLF(3)) = power^1;
+priority(idxLF(4)) = power^0;
+prior = priority;
+
 
 
 
@@ -140,27 +165,28 @@ for aa = 1:Na
 %     lookahead     = 0.7;
 %     lookahead     = 0.8;
 %     lookahead     = 0.9;
-    lookahead     = 1.0;
-%     lookahead     = 1.25;
-%     lookahead     = 1.5;
-    safety_settings = struct('Na',        Na,          ...
-                             'Nn',        Nn,          ...
-                             'Ns',        Ns,          ...
-                             'SL',        settings.SL, ...
-                             'AAA',       aa,          ...
-                             'vEst',      uLast,       ...
-                             'uNom',      u00,         ...
-                             'tSlots',    tSlots,      ...
-                             'lookahead', lookahead);
+%     lookahead     = 1.0;
+% %     lookahead     = 1.25;
+% %     lookahead     = 1.5;
+%     safety_settings = struct('Na',        Na,          ...
+%                              'Nn',        Nn,          ...
+%                              'Ns',        Ns,          ...
+%                              'SL',        settings.SL, ...
+%                              'AAA',       aa,          ...
+%                              'vEst',      uLast,       ...
+%                              'uNom',      u00,         ...
+%                              'tSlots',    tSlots,      ...
+%                              'lookahead', lookahead);
 
     % Priority / Nominal Control -- different for comm. v noncomm.
     if aa >= Na - (Nn - 1)
         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
+        priority = ones(Na,1);
 %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
     end
 
-    % Safety Constraints -- Same for comm. and noncomm.
-    [As,bs,safety_params] = get_issf_ffcbf_safety_constraints(t,x,safety_settings);
+%     % Safety Constraints -- Same for comm. and noncomm.
+%     [As,bs,safety_params] = get_issf_ffcbf_safety_constraints(t,x,safety_settings);
 
     
 
