@@ -452,7 +452,7 @@ for aa = 1:Na
     
     A(cc:cc+(nc-1),:) = Aw;
     b(cc:cc+(nc-1))   = bw;
-    Ht(cc:cc+(nc-1))   = hw;
+    Ht(cc:cc+(nc-1))  = hw;
     H0(cc:cc+(nc-1))  = hw0;
 
     cc = cc + nc;

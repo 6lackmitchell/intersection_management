@@ -1,8 +1,5 @@
-function [A,b,params] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,settings)
+function [A,b,params] = get_safety_constraints(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
-%   The relevant CBFs are taken into account here.
-Lr = 1.0;
-Lf = 1.0;
 
 % Unpack PCCA Settings
 % agent = settings.AAA;
@@ -10,18 +7,19 @@ Na    = settings.Na;
 
 % Add additional settings
 settings.('Nu')   = 1;
-settings.('Lr')   = Lr;
-settings.('Lf')   = Lf;
 settings.('lw')   = 3.0;
 
-% A = []; b = []; h = [];
 v00 = zeros(Na*settings.Nu,1);
 h00 = inf*ones(Na,1);
 
-nConstraints = 9;
-A = zeros(nConstraints*Na,settings.Nu*Na);
-b = zeros(nConstraints*Na,1);
-h = zeros(nConstraints*Na,1);
+nCons = 3;
+nRows = nCons*Na+settings.Ns;
+nCols = settings.Nu*Na+settings.Ns;
+
+A  = zeros(nRows,nCols);
+b  = zeros(nRows,1);
+h  = zeros(nRows,1);
+h0 = zeros(nRows,1);
 
 for aa = 1:Na
     
@@ -29,27 +27,27 @@ for aa = 1:Na
     
     [A1,b1,h1]         = get_speed_constraints(t,x,settings);
     [A2,b2,h2]         = get_road_constraints(t,x,settings);
-    [A4,b4,h4,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
 
-%     if aa < 4
-%         [A3,b3,h3] = get_intersection_constraints(t,x,settings);
-%     else
-%         A3 = []; b3 = []; h3 = 100;
-%     end
+    row_idx = nCons*(aa-1)+1:nCons*(aa-1)+nCons;
+    A(row_idx,:) = [A1; 0*A2];
+    b(row_idx)   = [b1; 0*b2];
+    h(row_idx)   = [h1; h2];
+    h0(row_idx)  = [h1; h2];
 
-    row_idx = nConstraints*(aa-1)+1:nConstraints*(aa-1)+nConstraints;
-    A(row_idx,:) = [A1; A2; A4];
-    b(row_idx)   = [b1; b2; b4];
-    h(row_idx)   = [h1; h2; h4];
-
-%     A = [A; A1; A2; A4];
-%     b = [b; b1; b2; b4];
-%     h = [h; h1; h2; h4];
-    
 end
 
+[A4,b4,h4,h04,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
+
+row_idx = nCons*Na+1:nCons*Na+factorial(Na-1);
+
+A(row_idx,:) = A4;
+b(row_idx)   = b4;
+h(row_idx)   = h4;
+h0(row_idx)  = h04;
+    
 % Organize parameters to be returned
 params = struct('h',   h,   ...
+                'h0',  h0,  ...
                 'v00', v00, ...
                 'h00', h00);
 
@@ -58,10 +56,13 @@ end
 function [A,b,h] = get_road_constraints(t,x,settings)
 aa = settings.aa;
 lw = settings.lw;
-Lr = settings.Lr;
+Nu = settings.Nu;
+Na = settings.Na;
+Ns = settings.Ns;
 
 xx = x(aa,:);
-A = zeros(2,4); b = ones(2,1);
+A = zeros(2,Nu*Na+Ns);
+b = ones(2,1);
 
 % vx and vy
 vx = xx(4)*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
@@ -70,14 +71,11 @@ vy = xx(4)*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 % ax and ay
 ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
-ax_con = cos(xx(3))-sin(xx(3))*tan(xx(5));
-ay_con = sin(xx(3))+cos(xx(3))*tan(xx(5));
+ax_con = [cos(xx(3))-sin(xx(3))*tan(xx(5))]';
+ay_con = [sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
-% l1 = 5.0;
-% l0 = 10.0;
-
-l1 = 5.0;
-l0 = l1^2 / 4;
+l1 = 100.0;
+l0 = l1^2 / 6;
 settings.('l1') = l1;
 settings.('l0') = l0;
 h = 999*ones(2,1);
@@ -113,28 +111,30 @@ function [A,b,h] = get_SENEroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+Ns = settings.Ns;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
-h1       = lw - x(1);
+h1       = (lw-R) - x(1);
 Lfh1     = -vx;
 Lf2h1    = -ax_unc;
 LgLf1    = -ax_con;
 
-h2       = x(1);
+h2       = x(1) - R;
 Lfh2     = vx;
 Lf2h2    = ax_unc;
 LgLf2    = ax_con;
 
-A        = zeros(2,Nu*Na);
+A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -152,28 +152,30 @@ function [A,b,h] = get_ESWSroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+Ns = settings.Ns;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
-h1       = lw + x(2);
+h1       = (lw-R) + x(2);
 Lfh1     = vy;
 Lf2h1    = ay_unc;
 LgLf1    = ay_con;
 
-h2       = -x(2);
+h2       = -x(2) - R;
 Lfh2     = -vy;
 Lf2h2    = -ay_unc;
 LgLf2    = -ay_con;
 
-A        = zeros(2,Nu*Na);
+A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -191,28 +193,30 @@ function [A,b,h] = get_ENWNroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+Ns = settings.Ns;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vy = settings.vy;
 ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
+R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
-h1       = lw - x(2);
+h1       = (lw-R) - x(2);
 Lfh1     = -vy;
 Lf2h1    = -ay_unc;
 LgLf1    = -ay_con;
 
-h2       = x(2);
+h2       = x(2) - R;
 Lfh2     = vy;
 Lf2h2    = ay_unc;
 LgLf2    = ay_con;
 
-A        = zeros(2,Nu*Na);
+A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -230,28 +234,30 @@ function [A,b,h] = get_NWSWroad_constraint(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
-Lr = settings.Lr;
-Lf = settings.Lf;
+Ns = settings.Ns;
+% Lr = settings.Lr;
+% Lf = settings.Lf;
 lw = settings.lw;
 l0 = settings.l0;
 l1 = settings.l1;
 vx = settings.vx;
 ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
+R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
-h1       = lw + x(1);
+h1       = (lw-R) + x(1);
 Lfh1     = vx;
 Lf2h1    = ax_unc;
 LgLf1    = ax_con;
 
-h2       = -x(1);
+h2       = -x(1) - R;
 Lfh2     = -vx;
 Lf2h2    = -ax_unc;
 LgLf2    = -ax_con;
 
-A        = zeros(2,Nu*Na);
+A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -269,53 +275,67 @@ function [A,b,h] = get_speed_constraints(t,x,settings)
 aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
+Ns = settings.Ns;
 
-idx    = aa;
+idx    = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 xx     = x(aa,:);
 
-h      = settings.SL - xx(4);
-Lfh    = 0;
-Lgh    = -1;
+kf      = 10; % Class K gain
+hf      = settings.SL - xx(4);
+Lfhf    = 0;
+Lghf    = [-1];
 
-A      = zeros(1,Nu*Na);
-A(idx) = -Lgh;
-b      = Lfh + 0.25*h^3;
+kr      = kf;
+hr      = xx(4);
+Lfhr    = 0;
+Lghr    = [1];
+
+A        = zeros(2,Nu*Na+Ns);
+b        = zeros(2,1);
+A(1,idx) = -Lghf;
+A(1,Na+idx) = -1; % Slack Parameter for speed limit
+A(2,idx) = -Lghr;
+
+b(1)     = Lfhf + kf*hf;
+b(2)     = Lfhr + kr*hr;
 
 A = round(A,12);
 b = round(b,12);
+h = [hf; hr];
 
 end
 
-function [A,b,H,v00,h00] = get_collision_avoidance_constraints(t,x,settings)
+function [A,b,Ht,H0,v00,h00] = get_collision_avoidance_constraints(t,x,settings)
 Nu    = settings.Nu;
 Na    = settings.Na;
-% Nn    = settings.Nn;
-Lr    = settings.Lr;
+Ns    = settings.Ns;
 tmax  = settings.lookahead;
-% AA    = settings.aa;
-% AAA   = settings.AAA;
-% uNom  = settings.uNom;
+uNom  = settings.uNom;
 
-% sl = 1.0;
 sw = 1.0;
 
+betadot = uNom(1:2:end);
+
 Nc  = factorial(Na-1);
-A   = zeros(Nc,Na*Nu);
+A   = zeros(Nc,Nu*Na+Ns);
 b   = zeros(Nc,1);
-H   = zeros(Nc,1);
+Ht  = zeros(Nc,1);
+H0  = zeros(Nc,1);
 v00 = zeros(Nu*Na,1);
 h00 = zeros(Na,1);
 cc  = 1;
+ss  = 1;
 
 % Loop through every scheduled agent for PCCA
 for aa = 1:Na
     
 %     Aw = []; bw = []; hw = [];
-    nc = Na-aa;
-    Aw = zeros(nc,Na*Nu);
-    bw = zeros(nc,1);
-    hw = zeros(nc,1);
-    dd = 1;
+    nc  = Na-aa;
+    Aw  = zeros(nc,Nu*Na+Ns);
+    bw  = zeros(nc,1);
+    hw  = zeros(nc,1);
+    hw0 = zeros(nc,1);
+    dd  = 1;
     
     % Loop through all other agents for interagent completeness
     for ii = aa+1:Na
@@ -340,7 +360,7 @@ for aa = 1:Na
         
         % Solve for minimizer of h
         kh       = 100.0;
-%         tmax     = 1.0;
+%         tmax     = xa(4)/9.81; % Minimum stopping time %1.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
         Heavy1   = heavyside(tau_star,kh,0);
@@ -348,10 +368,10 @@ for aa = 1:Na
         tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
 
         % accelerations -- controlled (con) and uncontrolled (unc)
-        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
-        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
-        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
-        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
+        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5))) - betadot(aa)*xa(4)*sin(xa(3))*sec(xa(5))^2;
+        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5))) - betadot(ii)*xi(4)*sin(xi(3))*sec(xi(5))^2;
+        aya_unc = -xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
+        ayi_unc = -xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
         axa_con = zeros(1,Na*Nu);
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
@@ -370,35 +390,57 @@ for aa = 1:Na
         % taudot
         tau_star_dot_unc = -(dax_unc*(2*dvx*tau_star + dx) + day_unc*(2*dvy*tau_star + dy) + (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
         tau_star_dot_con = -(dax_con*(2*dvx*tau_star + dx) + day_con*(2*dvy*tau_star + dy)) / (dvx^2 + dvy^2 + eps);
+
         Heavy_dot1_unc   = dheavyside(tau_star,kh,0)*tau_star_dot_unc;
         Heavy_dot2_unc   = dheavyside(tau_star,kh,tmax)*tau_star_dot_unc;
         Heavy_dot1_con   = dheavyside(tau_star,kh,0)*tau_star_dot_con;
         Heavy_dot2_con   = dheavyside(tau_star,kh,tmax)*tau_star_dot_con;
         tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
+
+        % Class K Function(s)
+        l0   = 20.0;
+        l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)
-        h   = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
-        Lfh = 2*dx*dvx + 2*dy*dvy + 2*tau*tau_dot_unc*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_unc + dvy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc);
-        Lgh = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+        h0   = dx^2 + dy^2 - (2*sw)^2;
+        h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
+        Lfh0 = 2*dx*dvx + 2*dy*dvy;
+        Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+        Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+       
+        % Standard CBF (Rel-Deg 2)
+        H   = h0;
+        LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+        LgH = 2*(dx*dax_con + dy*day_con);
 
-        % Class K Function
-%         kk = 10.0;
-        kk = 5.0;
-        kk = 3.25;
+%         % FF-CBF
+%         H   = h;
+%         LfH = Lfh;
+%         LgH = Lgh;
+
+%         % Robust-Virtual CBF
+%         alpha = 0.1;
+%         H     = h + alpha*h0;
+%         LfH   = Lfh + alpha*Lfh0;
+%         LgH   = Lgh;
     
         % Inequalities: Ax <= b
-        Aw(dd,:) = -Lgh;
-        bw(dd)   = Lfh + kk*h; 
-        hw(dd)   = min(h,(dx^2 + dy^2 - (2*sw)^2));
+        Aw(dd,1:Na*Nu)  = -LgH;
+%         Aw(dd,Na*Nu+ss) = -(0*l0)*(h0 - max(h,0));
+        bw(dd)          = LfH + l0*H; 
+        hw(dd)          = H;
+        hw0(dd)         = h0;
 
         dd = dd + 1;
+        ss = ss + 1;
 
     end
     
     A(cc:cc+(nc-1),:) = Aw;
     b(cc:cc+(nc-1))   = bw;
-    H(cc:cc+(nc-1))   = hw;
+    Ht(cc:cc+(nc-1))  = hw;
+    H0(cc:cc+(nc-1))  = hw0;
 
     cc = cc + nc;
     
@@ -414,7 +456,7 @@ Lr = settings.Lr;
 lw = settings.lw + 1;
 tSlots = settings.tSlots;
 
-idx = aa;
+idx = (-1:0)+aa*Nu;
 
 xx = x(aa,:);
 A = []; b = [];
@@ -470,10 +512,8 @@ function [A,b] = get_intersection_constraint(idx,h,Lfh,Lf2h,LgLf,Nu,Na)
 % l1 = 25.0;
 
 % Experimental
-l1 = 1.0;
-l1 = 0.1;
 l1 = 2.0;
-l0 = l1^2 / 4;
+l0 = l1^2 / 6;
 
 A      = zeros(1,Na*Nu);
 A(idx) = -LgLf;

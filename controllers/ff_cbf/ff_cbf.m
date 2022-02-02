@@ -1,10 +1,8 @@
-function [data] = ff_cbf(t,x,settings)
-%pcca - Controller based on Predictive Collision Avoidance Algorithm (pcca)
-%The foundation of this controller is a distributed CBF-QP control scheme
-%in which an ego agent solves for the inputs for the other agents in
-%addition to its own input and then implements its own solutionl.
+function [data] = ff_cbf(t,x,settings,params)
+%lqr_cbf - Controller based on nominal FxTS tracking and safety-compensating 
+% CBF for bicycle model
 %
-% Syntax:  [data] = pcca(t,x,settings)
+% Syntax:  [data] = ff_cbf(t,x,settings)
 %
 % Inputs:
 %    t:        current time in sec -- float
@@ -38,122 +36,173 @@ function [data] = ff_cbf(t,x,settings)
 % Website: http://www.blackmitchell.com
 % Jul 2021; Last revision: 13-Sep-2021
 %------------- BEGIN CODE --------------
-% Import control parameters
-run('control_params.m')
 
-% Deconstruct Settings
+% Deconstruct Settings and Params
 uLast    = settings.uLast;
-wHat     = settings.wHat;
-t0       = settings.t0;
-Tfxt     = settings.Tfxt;
-tSlots   = settings.tSlots;
-% cost     = @min_diff_nominal;
-cost     = @safe_pcca;
+prior    = settings.prior;
+Nu       = params.Nu;
+umax     = params.umax;
 
 % Organize parameters
-Na  = size(x,1);
-Nn  = 1;
+Na  = size(x,1);       % Number of agents
+Nn  = settings.Nn;     % Number of noncommunicating agents
+Ns  = Na;              % Number of slack variables
+Nd  = Na*Nu + Ns;      % Number of decision variables
 
 % Initialize variables
-u      = zeros(Na,Nu);
-uNom   = zeros(Na,Nu);
-mincbf = zeros(Na,1);
-sols   = zeros(Na,Nu*Na);
+u          = zeros(Na,Nu);
+uNom       = zeros(Na,Nu);
+mincbf     = zeros(Na,1);
+sols       = zeros(Na,Nd);
+u00        = zeros(Na*Nu,1);
+sat_vec    = [umax(1); umax(2)];  
+virt_violations = zeros(Na,1);
+phys_violations = zeros(Na,1);
 
-% Assign tslots
-tSlots = assign_tslots(t,x,tSlots);
+% tSlots
+tSlots = settings.tSlots;
 
+% Generate Nominal Control Inputs
 for aa = 1:Na
-    % PCCA Control Variables
-    sat_vec  = [umax(1); umax(2)];
+    % Loop Variables
     ctrl_idx = (-1:0)+aa*Nu;
-    u00      = zeros(Nu*Na,1);
-        
-    % Configure path settings for nominal controller
-    r           = settings.r;
-    rdot        = settings.rdot;
-    r2dot       = settings.rddot;
-    
+            
     % Generate nominal control input from trajectory tracking controller
-    u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),r(aa,:),rdot(aa,:),r2dot(aa,:),t0(aa),aa);
+    u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 
-    % Control Constraints
-    LB  = -repmat([umax(1); umax(2)],Na,1);
-    UB  =  repmat([umax(1); umax(2)],Na,1);
+end
 
-    % Class K Functions -- alpha(B) = a*B
-    Ak  = [];
-    bk  = [];
+% Generate "Energy"-based Priority Metric
+lookahead       = 1.0;
+safety_settings = struct('Na',        Na,          ...
+                         'Nn',        Nn,          ...
+                         'Ns',        Ns,          ...
+                         'SL',        settings.SL, ...
+                         'AAA',       aa,          ...
+                         'vEst',      uLast,       ...
+                         'uNom',      u00,         ...
+                         'tSlots',    tSlots,      ...
+                         'lookahead', lookahead);
+% Safety Constraints -- Same for comm. and noncomm.
+[As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+
+% Compute values for priority metrics
+power    = 10;
+xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
+ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
+h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
+Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
+
+% Compute priority
+metric_settings = struct('metric',  'None',        ...
+                         'power',   power,         ...
+                         'xdot',    [xdot ydot],   ...
+                         'xdes',    settings.r,    ...
+                         'xdesdot', settings.rdot, ...
+                         'h',       h_metric,      ...
+                         'Lgh',     Lgh,           ...
+                         'prior',   prior,         ...
+                         'Na',      Na,            ...
+                         'dt',      settings.dt);
+priority = get_priority_metric(t,x,metric_settings);
+prior    = priority;
+
+
+for aa = 1:Na
+    % Loop Variables
+    ctrl_idx = (-1:0)+aa*Nu;
     
-    % Safety-Compensating PCCA Control
-    pcca_settings = struct('Na',     Na,   ...
-                           'Nn',     Nn,   ...
-                           'AAA',    aa,   ...
-                           'wHat',   wHat, ...
-                           'uNom',   u0,   ...
-                           'tSlots', tSlots);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic(t,x,pcca_settings);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_solo(t,x,pcca_settings);
-%     [As,bs,hs] = get_ffcbf_safety_constraints_dynamic_pcca(t,x,pcca_settings);
+    % Safety-Compensating Decentralized Adaptive Reciprocal Control
+    uCost         = [u00; zeros(Ns,1)]; % Zeros for h slack
 
-    [As,bs,params] = get_ffcbf_safety_constraints_dynamic_ccs(t,x,pcca_settings);
-    
-    % Load Optimization Cost Fcn
-    cost_settings = struct('Nu',  Nu*Na,          ...
-                           'q',   repmat(q,Na,1), ...
-                           'idx', ctrl_idx,       ...
-                           'k',   1.0);
-%     [Q,p] = min_diff_nominal(u00,repmat(q,Na,1),Nu*Na,0,Ns);
-     u00  = u00 + params.v00;
-    [Q,p] = safe_pcca(u00,cost_settings);
+    % Priority / Nominal Control -- different for comm. v noncomm.
+    if aa >= Na - (Nn - 1)
+        uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
+%         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
 
-    A = As;
-    b = bs;
+        % Recompute safety w/ model of noncommunicating uCost
+        safety_settings.uNom  = uCost(1:Na*Nu);
+        [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+
+        % Reassign no priority
+        priority = ones(Na,1);
+    end
+
+    d = 1; % Param for relaxation of speed limit
+    q = [repmat(params.qu,Na,1); d*ones(Ns,1)];
+    cost_settings = struct('Nu',    Na*Nu + Ns,    ...
+                           'Na',    Na,       ...
+                           'q',     q,        ...
+                           'idx',   ctrl_idx, ...
+                           'k',     priority);
+    [Q,p] = priority_cost(uCost,cost_settings);
+    LB    = [-repmat(umax,Na,1); zeros(Ns,1)];
+    UB    = [ repmat(umax,Na,1); 1*ones(Ns,1)];
+    LB    = -inf*ones(Nd,1);
+    UB    =  inf*ones(Nd,1);
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
     try
-        [sol,fval,exitflag] = solve_quadratic_program(Q,p,A,b,[],[],LB,UB); 
+%         As = zeros(size(As)); bs = zeros(size(bs));
+        [sol,~,exitflag] = solve_quadratic_program(Q,p,As,bs,Ae,be,LB,UB); 
     catch ME
         disp(t)
         disp(ME.message)
         rethrow(ME)
     end
-    
-    if exitflag ~= 2
+
+    if 0%exitflag == 3 && max(safety_params.h0) > 0
+        sol = [-umax(2)*ones(4,1); zeros(6,1)];
+    elseif exitflag ~= 2
         disp(t);
         disp(exitflag);
         disp(aa)
         disp('Error');
+        data = struct('code',exitflag);
+        return 
+    end
+
+    ia_virt_cbf = [1];%safety_params.h(end-(factorial(Na-1)-1):end);
+    ia_phys_cbf = [1];%safety_params.h0(end-(factorial(Na-1)-1):end);
+
+    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+    if phys_violations(aa) > 0
+        disp('Physical Barrier Violated')
+        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations);
         return
     end
            
-    u(aa,:)     = sol(ctrl_idx);
+    u(aa,:)     = sol((-1:0)+aa*Nu);
     uLast(aa,:) = u(aa,:);
-    uNom(aa,:)  = u0;
-    mincbf(aa)  = min([params.h; 100]);
+    uNom(aa,:)  = u00(ctrl_idx);
+    mincbf(aa)  = min([safety_params.h; 100]);
     sols(aa,:)  = sol;
 
 end
 
 % Determine new values for wHat: wHat_ij = u_jj - u_ij
-wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols;
+wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols(1:Na*Nu);
 
 % Configure relevant variables for logging
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);
 cbf   = mincbf;
 
 % Organize data
-data = struct('u',      u,      ...
+data = struct('code',   1,      ...
+              'u',      u,      ...
               'uLast',  uLast,  ...
               'sols',   sols, ...
               'cbf',    cbf,    ...
               'wHat',   wHat,   ...
               'uNom',   uNom,   ...
-              'tSlots', tSlots);
-
+              'tSlots', tSlots, ...
+              'prior',  prior,  ...
+              'v_vio', virt_violations, ...
+              'p_vio', phys_violations);
 
 end
 %------------- END OF CODE --------------
