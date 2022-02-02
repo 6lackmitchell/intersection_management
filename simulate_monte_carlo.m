@@ -55,7 +55,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 5;
+nTrials        = 1000;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -98,7 +98,7 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/normal_cbf/fcfs_static_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing_cleanup.mat');
+filename = strcat('datastore/',dyn_mode,'/monte_carlo/normal_cbf/no_priority/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 save(filename)
 
 %% Analyze Throughput Results

@@ -21,6 +21,11 @@ function [priority] = get_priority_metric(t,x,settings)
 % Jan 2022; Last revision: 31-Jan-2022
 %------------- BEGIN CODE --------------% Load control params
 switch settings.metric
+    case 'None'
+        % No priority -- all equal
+        settings.power = 1;
+        idxLF = 1:1:settings.Na;
+
     case 'FCFS'
         % First Come First Served
         if t > settings.dt

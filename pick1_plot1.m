@@ -6,7 +6,7 @@ clf;
 
 dyn_mode = 'double_integrator';
 
-data = trial_data(2);
+data = trial_data(98);
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -30,7 +30,7 @@ figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
-    if jj == 1
+    if jj == 3
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,1),'LineWidth',lw)
     end
@@ -43,7 +43,7 @@ figure(3);
 title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
-    if jj == 1
+    if jj == 3
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
     end

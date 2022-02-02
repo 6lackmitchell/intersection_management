@@ -47,7 +47,11 @@ B = [0 0;
      0 1];
 
 % LQR Cost Function: x'*Q*x + u'*R*u
+xy_gain = 5;
+dot_gain = 10;
 Q = eye(size(A,1));
+Q(1:2,1:2) = xy_gain*Q(1:2,1:2);
+Q(3:4,3:4) = dot_gain*Q(3:4,3:4);
 R = eye(size(B,2));
 
 % Compute LQR gain
@@ -55,7 +59,7 @@ R = eye(size(B,2));
 
 % Compute optimal control
 u = -K*xerr;
-u = round(u,12);
+u = round(u,6);
 
 end
 

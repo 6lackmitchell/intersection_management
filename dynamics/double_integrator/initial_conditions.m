@@ -44,7 +44,7 @@ xGoal{4} = [-lw     -hlw;
 
 % Segmented Paths -- time to complete each segment
 first_T  = 2.0;
-first_T  = 0.75;
+% first_T  = 0.75;
 last_T   = 8.0;
 Tpath{1} = [first_T 1 2 1 last_T];
 Tpath{2} = [1 first_T last_T];
