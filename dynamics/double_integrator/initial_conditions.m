@@ -7,52 +7,13 @@ mc_start = 10.0;
 mc_veloc = 5.0;
 
 % This file contains simulation parameters related to environment
-% tol = 5e-1;
 tol = 1e-1;
-       
-% 6 Vehicles
-x1       = [ hlw -far   pi/2 5.0 0];
-x2       = [-hlw  far  -pi/2 5.0 0];
-x3       = [ far  hlw     pi 5.0 0];
-x4       = [-far -hlw      0 5.0 0];
-x4       = [-far+1.5 -hlw      0 5.0 0];
-
-x1       = [ hlw     -far+0.5   pi/2 6.0 0];
-x2       = [-hlw      far+0.5  -pi/2 5.0 0];
-x3       = [ far-1    hlw         pi 4.0 0];
-x4       = [-far+1.5 -hlw          0 5.0 0];
-x4       = [-far+3.0 -hlw          0 5.0 0];
-
-% Blue Behind
-x1       = [ hlw -far   pi/2 5.0 0];
-x2       = [-hlw  far  -pi/2 5.0 0];
-x3       = [ far  hlw     pi 5.0 0];
-x4       = [-far -hlw      0 7.5 0];
-
-% All equal
-x1       = [ hlw -far   pi/2 5.0 0];
-x2       = [-hlw  far  -pi/2 5.0 0];
-x3       = [ far  hlw     pi 5.0 0];
-x4       = [-far -hlw      0 5.0 0];
-
-% Farther Back
-x1       = [ hlw -far+3   pi/2 5.0 0];
-x2       = [-hlw  far  -pi/2 5.0 0];
-x3       = [ far+3  hlw     pi 5.0 0];
-x4       = [-far -hlw      0 5.0 0];
-
-% Up close
-x1       = [ hlw -close-1   pi/2 5.0 0];
-x2       = [-hlw  close  -pi/2 5.0 0];
-x3       = [ close-1  hlw     pi 5.0 0];
-x4       = [-close -hlw      0 5.0 0];
 
 % Monte Carlo Start
-x1       = [ hlw -mc_start   pi/2 mc_veloc 0];
-x2       = [-hlw  mc_start  -pi/2 mc_veloc 0];
-x3       = [ mc_start  hlw     pi mc_veloc 0];
-x4       = [-mc_start -hlw      0 mc_veloc 0];
-
+x1       = [ hlw -mc_start 0  mc_veloc];
+x2       = [-hlw  mc_start 0 -mc_veloc];
+x3       = [ mc_start  hlw -mc_veloc 0];
+x4       = [-mc_start -hlw  mc_veloc 0];
 
 x0       = [x1; x2; x3; x4];
 nAgents  = size(x0,1);

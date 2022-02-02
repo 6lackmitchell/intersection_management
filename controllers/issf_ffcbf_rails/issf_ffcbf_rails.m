@@ -47,7 +47,8 @@ umax     = params.umax;
 % Organize parameters
 Na  = size(x,1);       % Number of agents
 Nn  = settings.Nn;     % Number of noncommunicating agents
-Ns  = factorial(Na-1); % Number of slack variables
+% Ns  = factorial(Na-1); % Number of slack variables
+Ns  = Na; % Number of slack variables
 Nd  = Na*Nu + Ns;      % Number of decision variables
 
 % Initialize variables
@@ -76,36 +77,12 @@ priority = zeros(Na,1);
 % Compute values for priority metrics
 xdot = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
-% LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
-<<<<<<< HEAD
-% LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
 % [~,idxLF] = sort(LyapunovFunc,'ascend');
-=======
-LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
-[~,idxLF] = sort(LyapunovFunc,'ascend');
->>>>>>> 6c5c128 (testing more)
+
 
 % %     LyapunovFunc(aa) = 1/2*norm(settings.r(aa,:) - x(aa,1:2))^2 + 1/2*norm(settings.rdot(aa,:) - [xdot ydot])^2; % Deviation from nominal trajectory
 %     LyapunovFunc(aa) = 1/2*norm([xdot ydot])^2; % Speed
 % %     LyapunovFunc(aa) = 1/2*norm(x(aa,1:2))^2; % Distance from intersection center
-
-
-<<<<<<< HEAD
-% % FCFS (based on speed) -- Static
-=======
-% % FCFS (based on speed)
->>>>>>> 6c5c128 (testing more)
-% if t == 0.01
-%     priority(idxLF(1)) = power^0; % Rich get richer
-%     priority(idxLF(2)) = power^1;
-%     priority(idxLF(3)) = power^2;
-%     priority(idxLF(4)) = power^3;
-% else
-%     priority(1) = prior(1);
-%     priority(2) = prior(2);
-%     priority(3) = prior(3);
-%     priority(4) = prior(4);
-% end
 
 %     priority(1) = power^3; % Static Priority
 %     priority(2) = power^2;
@@ -115,10 +92,10 @@ LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rd
 %     priority(idxLF(2)) = power^2;
 %     priority(idxLF(3)) = power^1;
 %     priority(idxLF(4)) = power^0;
-    priority(idxLF(1)) = power^0; % Wealth Redistribution
-    priority(idxLF(2)) = power^1;
-    priority(idxLF(3)) = power^2;
-    priority(idxLF(4)) = power^3;
+%     priority(idxLF(1)) = power^0; % Wealth Redistribution
+%     priority(idxLF(2)) = power^1;
+%     priority(idxLF(3)) = power^2;
+%     priority(idxLF(4)) = power^3;
 
 
 
@@ -147,13 +124,45 @@ safety_settings = struct('Na',        Na,          ...
 % Safety Constraints -- Same for comm. and noncomm.
 [As,bs,safety_params] = get_issf_ffcbf_safety_constraints(t,x,safety_settings);
 
-Lgh = As(end-(Ns-1):end,1:Na);
-LyapunovFunc = 1/2*sum(Lgh.^2);
+% Lgh = As(end-(Ns-1):end,1:Na);
+% LyapunovFunc = 1/2*sum(Lgh.^2);
+LyapunovFunc = 1/2*vecnorm([xdot ydot]').^2; % Speed (First-come first served)
+% LyapunovFunc = 1/2*vecnorm(settings.r' - x(:,1:2)').^2 + 1/2*vecnorm(settings.rdot' - [xdot ydot]').^2;
 [~,idxLF] = sort(LyapunovFunc,'ascend');
-priority(idxLF(1)) = power^3; % Rich get richer
-priority(idxLF(2)) = power^2;
-priority(idxLF(3)) = power^1;
-priority(idxLF(4)) = power^0;
+
+% FCFS (based on speed) -- Static
+if t == 0.01
+    priority(idxLF(1)) = power^0; % Rich get richer
+    priority(idxLF(2)) = power^1;
+    priority(idxLF(3)) = power^2;
+    priority(idxLF(4)) = power^3;
+else
+    priority(1) = prior(1);
+    priority(2) = prior(2);
+    priority(3) = prior(3);
+    priority(4) = prior(4);
+end
+
+% priority(idxLF(1)) = power^0; % Wealth Redistribution
+% priority(idxLF(2)) = power^1;
+% priority(idxLF(3)) = power^2;
+% priority(idxLF(4)) = power^3;
+% % priority(idxLF(1)) = power^3; % Rich get richer
+% % priority(idxLF(2)) = power^2;
+% % priority(idxLF(3)) = power^1;
+% % priority(idxLF(4)) = power^0;
+% % FCFS (based on speed) -- Static
+% if t == 0.01
+%     priority(idxLF(1)) = power^0; % Wealth Redistribution
+%     priority(idxLF(2)) = power^1;
+%     priority(idxLF(3)) = power^2;
+%     priority(idxLF(4)) = power^3;
+% else
+%     priority(1) = prior(1);
+%     priority(2) = prior(2);
+%     priority(3) = prior(3);
+%     priority(4) = prior(4);
+% end
 prior = priority;
 
 
@@ -199,7 +208,7 @@ for aa = 1:Na
 
     
 
-    d = 1e1;%power^(Na+1);
+    d = 1;%power^(Na+1);
     q = [repmat(params.qu(2),Na,1); repmat(d,Ns,1)];
     cost_settings = struct('Nu',    Na*(Nu-1) + Ns, ...
                            'Na',    Na,               ...

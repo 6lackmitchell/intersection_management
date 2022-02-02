@@ -19,14 +19,15 @@ clc; clear; close all; restoredefaultpath;
 % Dynamics and Controller modes
 mode           = "Centralized Priority-Cost Allocation";
 % dyn_mode       = "dynamic_bicycle_rdrive";
-dyn_mode       = "dynamic_bicycle_rdrive_1u";
-con_mode       = "issf_ffcbf_rails";
+% dyn_mode       = "dynamic_bicycle_rdrive_1u";
+dyn_mode       = "double_integrator";
+con_mode       = "lqr_cbf";
 cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
-% addpath '/Library/gurobi912/mac64/matlab'; % For mac
-addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
+addpath '/Library/gurobi912/mac64/matlab'; % For mac
+% addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
@@ -50,12 +51,12 @@ end
 
 % Load settings into workspace
 run('settings/timing.m')
-run(strcat('dynamics/',dyn_mode,'/initial_conditions_cpca.m'))
+run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 500;
-nNon           = 1;
+nTrials        = 10;
+nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -76,7 +77,7 @@ parfor nn = 1:nTrials
 % for nn = 1:nTrials
 
     % Set up trial
-    [x0_new,Tpath_new]  = randomize_ic(x0,Tpath);
+    [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
     t_params    = struct('nTimesteps',nTimesteps,'ti',ti,'tf',tf,'dt',dt);
     settings    = struct('x0',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
     trial_setup = struct('dynamics',   dynamics,   ...
@@ -97,20 +98,12 @@ toc
 beep
 
 %% Save Simulation Results
-<<<<<<< HEAD
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/energy_based/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_NC_intersection_tests.mat');
-=======
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/ff_cbf/high_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo',num2str(nTrials),'_intersection_tests.mat');
->>>>>>> 6c5c128 (testing more)
+filename = strcat('datastore/',dyn_mode,'/monte_carlo/normal_cbf/fcfs_static_speed/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing_cleanup.mat');
 save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
-<<<<<<< HEAD
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/normal_cbf/high_deviation/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
-=======
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/high_deviation/issf_ffcbf_rails_4MonteCarlo500_intersection_tests'
->>>>>>> 6c5c128 (testing more)
+% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/fcfs_static_speed/issf_ffcbf_rails_4MonteCarlo500_a2'
 % load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
@@ -134,13 +127,8 @@ fraction_finished   = length(finished) / (nAgents*nTrials)
 fraction_unfinished = 1 - fraction_finished;
 
 fraction_infeasible = sum(infeas) / nTrials;
-<<<<<<< HEAD
-fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
-
-=======
 
 fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
->>>>>>> 6c5c128 (testing more)
 fraction_feasible   = 1 - fraction_infeasible
 
 % fraction_virt_vio   = sum(vvios) / nTrials
@@ -175,7 +163,8 @@ SL         = misc_params.SL;
 
 x          = zeros(nTimesteps,nAgents,nStates);
 u          = zeros(nTimesteps,nAgents,nControls);
-sols       = zeros(nTimesteps,nAgents,nAgents*nControls+factorial(nAgents-1));
+u0         = zeros(nTimesteps,nAgents,nControls);
+sols       = zeros(nTimesteps,nAgents,nAgents*nControls+4);
 priority   = zeros(nTimesteps,nAgents);
 violations = zeros(nTimesteps,nAgents,2);
 x(1,:,:)   = x0;
@@ -193,13 +182,16 @@ gidx      = ones(nAgents,1);
 Tfxt      = ones(nAgents,1);
 wHat      = zeros(nAgents,nAgents*nControls);
 thru_time = Inf*ones(nAgents,1);
-success   = 1;
+success   = zeros(nAgents,1);
 tol       = 0.5;
 
+ii = 1;
+nInfeas = 0;
 
-for ii = 1:nTimesteps
-    t                 = ii *  dt;
-    xx                = squeeze(x(ii,:,:));
+% for ii = 1:nTimesteps
+while ii <= nTimesteps
+    t   = ii *  dt;
+    xx  = squeeze(x(ii,:,:));
 
 %     % Simulation Progress
 %     if mod(ii,1/dt) == 0
@@ -224,6 +216,11 @@ for ii = 1:nTimesteps
         % Set quit flag to true if final goal met
         if newidx == size(xGoal{aa},1) - 1
             thru_time(aa) = t;
+            success(aa) = 1;
+        end
+
+        if sum(success) == nAgents
+            break
         end
 
         % Specify path segment
@@ -273,8 +270,9 @@ for ii = 1:nTimesteps
                                'SL',       SL,       ...
                                't0',       t0,       ...
                                'prior',    priority(max(ii-1,1),:), ...
-                               'Nn',       nNon);
-    try
+                               'Nn',       nNon, ...
+                               'dt',       dt);
+%     try
         % Compute control input
         data         = controller(t,xx,settings,u_params);
 
@@ -286,37 +284,54 @@ for ii = 1:nTimesteps
             uLast           = data.uLast;
     %         safety(ii,:)    = data.cbf;
             tSlots          = data.tSlots;
-    %         uNom(ii,:,:)    = data.uNom;
+            u0(ii,:,:)      = data.uNom;
             wHat            = data.wHat;
             priority(ii,:)  = data.prior;
             violations(ii,:) = [data.v_vio; data.p_vio]';
         elseif data.code == -1
             violations(ii,:) = [data.v_vio; data.p_vio]';
             break
+        elseif data.code == 3
+            if t == dt
+                [x0_new,Tpath_new]  = randomize_ic(x0,Tpath);
+                x(ii,:,:) = x0_new;
+                Tpath = Tpath_new;
+                nInfeas = nInfeas + 1;
+                if nInfeas >= 10
+                    break
+                end
+                continue
+            end
+            data.code = 0;
+            break
         else
             data.code = 0;
             break
         end
 
-    catch ME
-%         disp(ME)
-        success = 0;
-        break
-    end
+%     catch ME
+%         break
+%     end
 
     % Update Dynamics
     xdot          = dynamics(t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)),settings);
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
 
     % Restrict Angles to between -pi and pi
-    x(ii + 1,:,3) = wrapToPi(x(ii + 1,:,3));
+    if ~strcmp(func2str(dynamics),'double_integrator')
+        x(ii + 1,:,3) = wrapToPi(x(ii + 1,:,3));
+    end
+
+    % Iterate
+    ii = ii + 1;
 
 end
 
-trial_data = struct('code', data.code,   ...
+trial_data = struct('code', data.code, ...
                     'TTI',  thru_time, ...
                     'x',    x,         ...  
                     'u',    u,         ...
+                    'u0',   u0,        ...
                     't',    t,         ...
                     'sols', sols,      ...
                     'vios', violations);
@@ -330,14 +345,15 @@ ret = struct('code', 0,                                 ...
              'vios', zeros(nTimesteps,nAgents,2),       ...
              'x',    zeros(nTimesteps,nAgents,nStates), ...  
              'u',    zeros(nTimesteps,nAgents,2),       ...
+             'u0',   zeros(nTimesteps,nAgents,2),       ...
              't',    0);
 end
 
-function [x0_rand,Tpath] = randomize_ic(x0,Tpath)
+function [x0_rand,Tpath] = randomize_ic(x0,Tpath,dyn_mode)
     x0_rand       = x0;
-    d_variability = 0.0;
-    s_variability = 4.0;
-    avg_speed     = 6.0;
+    d_variability = 5.0;
+    s_variability = 3.0;
+    avg_speed     = 7.5;
 
     for aa = 1:size(x0,1)
         % Random distance from intersection -- uniform dist.
@@ -345,7 +361,7 @@ function [x0_rand,Tpath] = randomize_ic(x0,Tpath)
         rand_speed = (2*s_variability)*(rand(1) - 0.5);
 
         % Randomize Distance from intersection and adjust time
-        if abs(x0(aa,1)) == 1.5
+        if abs(x0(aa,2)) == 1.5
             x0_rand(aa,1) = x0(aa,1) + rand_dist;
             Tpath{aa}(1)  = abs(x0_rand(aa,1) / avg_speed);
         else
@@ -354,7 +370,15 @@ function [x0_rand,Tpath] = randomize_ic(x0,Tpath)
         end
     
         % Random speed
-        x0_rand(aa,4) = x0(aa,4) + rand_speed;
+        if dyn_mode ~= 'double_integrator'
+            x0_rand(aa,4) = x0(aa,4) + rand_speed;
+        else
+            if abs(x0(aa,2)) == 1.5
+                x0_rand(aa,3) = x0(aa,3) + rand_speed;
+            else
+                x0_rand(aa,4) = x0(aa,4) + rand_speed;
+            end
+        end
 
     end
 end

@@ -2,12 +2,15 @@ find(infeas==1)
 find(pvios>0)
 clf;
 
-data = trial_data(482);
+dyn_mode = 'double_integrator';
+
+data = trial_data(2);
 code = data.code;
 t = data.t;
 dt = 0.01;
 x = data.x;
 u = data.u;
+u0 = data.u0;
 sols = data.sols;
 violations = data.vios;    
 
@@ -25,32 +28,38 @@ figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
+    if jj == 1
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
+    plot(tt,u0(1:ii,jj,1),'LineWidth',lw)
+    end
 %     plot(tt,atan(uNom(1:ii,jj,1)),'LineWidth',lw)
 end
-legend('\omega_1','\omega_2','\omega_3','\omega_4','\omega_5','\omega_6')
+legend('u_{11}','\mu_{11}','u_{21}','\mu_{21}','u_{31}','\mu_{31}','u_{41}','\mu_{41}')
 hold off
 
 figure(3);
 title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
+    if jj == 1
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
+    plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
+    end
 %     plot(tt,uNom(1:ii,jj,2),':','LineWidth',lw)
 end
-legend('a_1','a_2','a_3','a_4','a_5','a_6')
+legend('u_{12}','\mu_{12}','u_{22}','\mu_{22}','u_{32}','\mu_{32}','u_{42}','\mu_{42}')
 hold off
 
-figure(4);
-title('Slack Variables')
-hold on
-for jj = 1:nAgents
-    for ss = 1:factorial(nAgents-1)
-        plot(tt,sols(1:ii,jj,nAgents*nControls+ss),'LineWidth',lw)
-    end
-end
-legend('\delta_1','\delta_2','\delta_3','\delta_4','\delta_5','\delta_6')
-hold off
+% figure(4);
+% title('Slack Variables')
+% hold on
+% for jj = 1:nAgents
+%     for ss = 1:factorial(nAgents-1)
+%         plot(tt,sols(1:ii,jj,nAgents*nControls+ss),'LineWidth',lw)
+%     end
+% end
+% legend('\delta_1','\delta_2','\delta_3','\delta_4','\delta_5','\delta_6')
+% hold off
 
 % figure(4);
 % title('Violations')
@@ -114,5 +123,5 @@ road_file = 'datastore/geometry/road_markings.mat';
 load(road_file)
 
 moviename = erase(filename,'.mat');
-cinematographer(dt,x(1:(ii),:,:),obstacles,moviename)
+cinematographer(dt,x(1:(ii),:,:),dyn_mode,obstacles,moviename)
 

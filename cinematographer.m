@@ -1,4 +1,5 @@
-function cinematographer(dt,x,obstacles,filename)
+function cinematographer(dt,x,dyn_mode,obstacles,filename)
+
 
 
 color = repmat(['b','k','g','r','m','c'],1,5);
@@ -6,8 +7,8 @@ lw    = 3.0;
 mksz  = 12.0;
 maxsteps = size(x,1);
 nAgents = size(x,2);
-maxXdim = 30;
-maxYdim = 30;
+maxXdim = 25;
+maxYdim = 25;
 
 % Plotting params
 theta = 0:2*pi/101:2*pi;
@@ -52,13 +53,18 @@ for oo = 1:length(obstacles)
     plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
 end
 for ii=1:1:nAgents
-    cx1 = x(1,ii,1) + L/2*cos(x(1,ii,3));
-    cy1 = x(1,ii,2) + L/2*sin(x(1,ii,3));
-    cx2 = x(1,ii,1) - L/2*cos(x(1,ii,3));
-    cy2 = x(1,ii,2) - L/2*sin(x(1,ii,3));
-
-    ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
-    ox2 = cx2 + (RR/2)*cos(theta); oy2 = cy2 + (RR/2)*sin(theta);
+    if dyn_mode == 'double_integrator'
+        th = atan2(x(1,ii,4),x(1,ii,3));
+        cx1 = x(1,ii,1);
+        cy1 = x(1,ii,2);
+        cx2 = x(1,ii,1);
+        cy2 = x(1,ii,2);
+    else
+        cx1 = x(1,ii,1) + L/2*cos(x(1,ii,3));
+        cy1 = x(1,ii,2) + L/2*sin(x(1,ii,3));
+        cx2 = x(1,ii,1) - L/2*cos(x(1,ii,3));
+        cy2 = x(1,ii,2) - L/2*sin(x(1,ii,3));
+    end
 
     if ii < 5
         ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);
@@ -98,6 +104,7 @@ end
 % If the movie is going too slow, you can increase the "stride" value, e.g.
 %   put "for j = 1:10:maxsteps" or some other number in the middle.
 for tt=1:(1/(50*dt)):maxsteps
+% for tt=(maxsteps-100):(1/(50*dt)):maxsteps
 
     clf
 %     set(gcf, 'Position', position)
@@ -106,10 +113,18 @@ for tt=1:(1/(50*dt)):maxsteps
         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
     end
     for ii=1:1:nAgents
-        cx1 = x(tt,ii,1) + L/2*cos(x(tt,ii,3));
-        cy1 = x(tt,ii,2) + L/2*sin(x(tt,ii,3));
-        cx2 = x(tt,ii,1) - L/2*cos(x(tt,ii,3));
-        cy2 = x(tt,ii,2) - L/2*sin(x(tt,ii,3));
+        if dyn_mode == 'double_integrator'
+            th = atan2(x(1,ii,4),x(1,ii,3));
+            cx1 = x(tt,ii,1);
+            cy1 = x(tt,ii,2);
+            cx2 = x(tt,ii,1);
+            cy2 = x(tt,ii,2);
+        else
+            cx1 = x(tt,ii,1) + L/2*cos(x(1,ii,3));
+            cy1 = x(tt,ii,2) + L/2*sin(x(1,ii,3));
+            cx2 = x(tt,ii,1) - L/2*cos(x(1,ii,3));
+            cy2 = x(tt,ii,2) - L/2*sin(x(1,ii,3));
+        end
 
         if ii < 5
             ox1 = cx1 + (RR/2)*cos(theta); oy1 = cy1 + (RR/2)*sin(theta);

@@ -1,23 +1,18 @@
-function [A,b,params] = get_issf_ffcbf_safety_constraints(t,x,settings)
+function [A,b,params] = get_safety_constraints(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
-%   The relevant CBFs are taken into account here.
-Lr = 1.0;
-Lf = 1.0;
 
 % Unpack PCCA Settings
 % agent = settings.AAA;
 Na    = settings.Na;
 
 % Add additional settings
-settings.('Nu')   = 1;
-settings.('Lr')   = Lr;
-settings.('Lf')   = Lf;
+settings.('Nu')   = 2;
 settings.('lw')   = 3.0;
 
 v00 = zeros(Na*settings.Nu,1);
 h00 = inf*ones(Na,1);
 
-nCons = 4;
+nCons = 3;
 nRows = nCons*Na+settings.Ns;
 nCols = settings.Nu*Na+settings.Ns;
 
@@ -34,8 +29,8 @@ for aa = 1:Na
     [A2,b2,h2]         = get_road_constraints(t,x,settings);
 
     row_idx = nCons*(aa-1)+1:nCons*(aa-1)+nCons;
-    A(row_idx,:) = [A1; A2];
-    b(row_idx)   = [b1; b2];
+    A(row_idx,:) = [A1; 0*A2];
+    b(row_idx)   = [b1; 0*b2];
     h(row_idx)   = [h1; h2];
     h0(row_idx)  = [h1; h2];
 
@@ -61,7 +56,6 @@ end
 function [A,b,h] = get_road_constraints(t,x,settings)
 aa = settings.aa;
 lw = settings.lw;
-Lr = settings.Lr;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
@@ -71,16 +65,16 @@ A = zeros(2,Nu*Na+Ns);
 b = ones(2,1);
 
 % vx and vy
-vx = xx(4)*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
-vy = xx(4)*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
+vx = xx(3);
+vy = xx(4);
 
 % ax and ay
-ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
-ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
-ax_con = [cos(xx(3))-sin(xx(3))*tan(xx(5))]';
-ay_con = [sin(xx(3))+cos(xx(3))*tan(xx(5))]';
+ax_unc = 0;
+ay_unc = 0;
+ax_con = [1 0];
+ay_con = [0 1];
 
-l1 = 5.0;
+l1 = 3.0;
 l0 = l1^2 / 6;
 settings.('l1') = l1;
 settings.('l0') = l0;
@@ -128,7 +122,7 @@ ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
 R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
 h1       = (lw-R) - x(1);
 Lfh1     = -vx;
@@ -169,7 +163,7 @@ ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
 R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
 h1       = (lw-R) + x(2);
 Lfh1     = vy;
@@ -210,7 +204,7 @@ ay_unc = settings.ay_unc;
 ay_con = settings.ay_con;
 R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
 h1       = (lw-R) - x(2);
 Lfh1     = -vy;
@@ -251,7 +245,7 @@ ax_unc = settings.ax_unc;
 ax_con = settings.ax_con;
 R = 1;
 
-idx = aa;
+idx = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 
 h1       = (lw-R) + x(1);
 Lfh1     = vx;
@@ -283,32 +277,24 @@ Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
 
-idx    = aa;
+idx    = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 xx     = x(aa,:);
 
-hf      = settings.SL - xx(4);
+kf      = 10; % Class K gain
+hf      = (settings.SL)^2 - xx(3)^2 - xx(4)^2;
 Lfhf    = 0;
-Lghf    = [-1];
+Lghf    = [-2*xx(3); -2*xx(4)]';
 
-hr      = xx(4);
-Lfhr    = 0;
-Lghr    = [1];
-
-A        = zeros(2,Nu*Na+Ns);
-b        = zeros(2,1);
+A        = zeros(1,Nu*Na+Ns);
+b        = zeros(1,1);
 A(1,idx) = -Lghf;
 A(1,Na+idx) = -1; % Slack Parameter for speed limit
-A(2,idx) = -Lghr;
 
-% b(1)     = Lfhf + 0.25*hf^3;
-% b(2)     = Lfhr + 0.25*hr^3;
-
-b(1)     = Lfhf + 10*hf;
-b(2)     = Lfhr + 10*hr;
+b(1)     = Lfhf + kf*hf;
 
 A = round(A,12);
 b = round(b,12);
-h = [hf; hr];
+h = hf;
 
 end
 
@@ -316,19 +302,11 @@ function [A,b,Ht,H0,v00,h00] = get_collision_avoidance_constraints(t,x,settings)
 Nu    = settings.Nu;
 Na    = settings.Na;
 Ns    = settings.Ns;
-% Nn    = settings.Nn;
-Lr    = settings.Lr;
 tmax  = settings.lookahead;
-% AA    = settings.aa;
-% AAA   = settings.AAA;
 uNom  = settings.uNom;
 
-% sl = 1.0;
 sw = 1.0;
 
-betadot = uNom(1:2:end);
-
-% A = []; b = []; H = [];
 Nc  = factorial(Na-1);
 A   = zeros(Nc,Nu*Na+Ns);
 b   = zeros(Nc,1);
@@ -356,18 +334,18 @@ for aa = 1:Na
         xa = x(aa,:);
         xi = x(ii,:);
         
-        idx_aa = aa;
-        idx_ii = ii;
+        idx_aa = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
+        idx_ii = Nu*(ii-1)+1:Nu*(ii-1)+Nu;
               
         % dx and dy
         dx  = xa(1) - xi(1);
         dy  = xa(2) - xi(2);
         
         % dvx and dvy
-        vax = xa(4)*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
-        vay = xa(4)*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
-        vix = xi(4)*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
-        viy = xi(4)*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
+        vax = xa(3);
+        vay = xa(4);
+        vix = xi(3);
+        viy = xi(4);
         dvx = vax - vix;
         dvy = vay - viy;
         
@@ -381,18 +359,18 @@ for aa = 1:Na
         tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
 
         % accelerations -- controlled (con) and uncontrolled (unc)
-        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5))) - betadot(aa)*xa(4)*sin(xa(3))*sec(xa(5))^2;
-        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5))) - betadot(ii)*xi(4)*sin(xi(3))*sec(xi(5))^2;
-        aya_unc = -xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
-        ayi_unc = -xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
+        axa_unc = 0;
+        axi_unc = 0;
+        aya_unc = 0;
+        ayi_unc = 0;
         axa_con = zeros(1,Na*Nu);
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
         ayi_con = zeros(1,Na*Nu);
-        axa_con(idx_aa) = cos(xa(3))-sin(xa(3))*tan(xa(5));
-        axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5));
-        aya_con(idx_aa) = sin(xa(3))+cos(xa(3))*tan(xa(5));
-        ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5)); 
+        axa_con(idx_aa) = [1 0];
+        axi_con(idx_ii) = [1 0];
+        aya_con(idx_aa) = [0 1];
+        ayi_con(idx_ii) = [0 1]; 
         
         % dax and day
         dax_unc = axa_unc - axi_unc;
@@ -412,7 +390,7 @@ for aa = 1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = 3.0;
+        l0   = 1.0;
         l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)
@@ -452,7 +430,7 @@ for aa = 1:Na
     
     A(cc:cc+(nc-1),:) = Aw;
     b(cc:cc+(nc-1))   = bw;
-    Ht(cc:cc+(nc-1))   = hw;
+    Ht(cc:cc+(nc-1))  = hw;
     H0(cc:cc+(nc-1))  = hw0;
 
     cc = cc + nc;
