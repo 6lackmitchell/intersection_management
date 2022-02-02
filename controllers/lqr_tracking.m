@@ -47,7 +47,7 @@ B = [0 0;
      0 1];
 
 % LQR Cost Function: x'*Q*x + u'*R*u
-xy_gain = 5;
+xy_gain = 50;
 dot_gain = 10;
 Q = eye(size(A,1));
 Q(1:2,1:2) = xy_gain*Q(1:2,1:2);

@@ -103,7 +103,7 @@ save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
-% to_load  = 'datastore/dynamic_bicycle_rdrive_1u/monte_carlo/ff_cbf/fcfs_static_speed/issf_ffcbf_rails_4MonteCarlo500_a2'
+% to_load  = 'datastore/double_integrator/monte_carlo/normal_cbf/no_priority/lqr_cbf_4MonteCarlo_N1000_centralized_noinputconstraints_a20'
 % load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
@@ -289,7 +289,7 @@ while ii <= nTimesteps
                                'prior',    priority(max(ii-1,1),:), ...
                                'Nn',       nNon, ...
                                'dt',       dt);
-%     try
+    try
         % Compute control input
         data         = controller(t,xx,settings,u_params);
 
@@ -308,13 +308,14 @@ while ii <= nTimesteps
         elseif data.code == -1
             violations(ii,:) = [data.v_vio; data.p_vio]';
             break
-        elseif data.code == 3
+        elseif data.code == 3 || data.code == 4
             if t == dt
-                [x0_new,Tpath_new]  = randomize_ic(x0,Tpath);
+                [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,func2str(dynamics));
                 x(ii,:,:) = x0_new;
                 Tpath = Tpath_new;
-                nInfeas = nInfeas + 1;
+                nInfeas = nInfeas + 1
                 if nInfeas >= 10
+                    data.code = 0;
                     break
                 end
                 continue
@@ -326,9 +327,9 @@ while ii <= nTimesteps
             break
         end
 
-%     catch ME
-%         break
-%     end
+    catch ME
+        break
+    end
 
     outside_idx = find(sqrt(sum(squeeze(x(ii,:,1:2))'.^2)) > 20);
     if sum(success) == nAgents || any(success(outside_idx) == 0)

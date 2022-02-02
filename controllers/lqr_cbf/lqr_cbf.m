@@ -74,7 +74,16 @@ for aa = 1:Na
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 
-    if u0(2) == 0
+    % Rail Constraints for double integrator
+    if u0(1) == 0 && u0(2) == 0
+        if abs(x(aa,3)) > abs(x(aa,4))
+            Ae(aa,ctrl_idx) = [0 1];
+        elseif abs(x(aa,3)) < abs(x(aa,4))
+            Ae(aa,ctrl_idx) = [1 0];
+        else
+            Ae(aa,ctrl_idx) = [0 0];
+        end
+    elseif u0(2) == 0
         Ae(aa,ctrl_idx) = [-u0(2)/u0(1) 1];
     else
         Ae(aa,ctrl_idx) = [1 -u0(1)/u0(2)];
@@ -166,8 +175,8 @@ for aa = 1:Na
         return 
     end
 
-    ia_virt_cbf = [1];%safety_params.h(end-(factorial(Na-1)-1):end);
-    ia_phys_cbf = [1];%safety_params.h0(end-(factorial(Na-1)-1):end);
+    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
+    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
 
     virt_violations(aa) = sum(find(ia_virt_cbf < 0));
     phys_violations(aa) = sum(find(ia_phys_cbf < 0));
