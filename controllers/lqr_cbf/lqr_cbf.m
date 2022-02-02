@@ -174,7 +174,7 @@ for aa = 1:Na
            
     u(aa,:)     = sol((-1:0)+aa*Nu);
     uLast(aa,:) = u(aa,:);
-    uNom(aa,:)  = u00(aa,:);
+    uNom(aa,:)  = u00(ctrl_idx);
     mincbf(aa)  = min([safety_params.h; 100]);
     sols(aa,:)  = sol;
 
