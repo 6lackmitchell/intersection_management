@@ -25,7 +25,7 @@ function [r,rdot,rddot] = trajectories(t,x,settings)
 % Website: http://www.blackmitchell.com
 % Aug 2021; Last revision: 2-Aug-2021
 %------------- BEGIN CODE --------------
-epsilon = 0.5;
+epsilon = 0.01;
 
 T    = settings.T;
 t0   = settings.t0;
@@ -58,7 +58,7 @@ if strcmp(path,'linear')
     if tau < 1
         rdot = (xF - xS) / T;
     elseif norm(r - x(1:2)) > epsilon
-        rdot = (r - x(1:2)) / 0.1;
+        rdot = (r - x(1:2)) / 0.01;
     else
         rdot = [0 0];
     end

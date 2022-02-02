@@ -26,8 +26,8 @@ cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
-addpath '/Library/gurobi912/mac64/matlab'; % For mac
-% addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
+% addpath '/Library/gurobi912/mac64/matlab'; % For mac
+addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
@@ -55,7 +55,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 10;
+nTrials        = 5;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -111,24 +111,34 @@ vvios   = zeros(nTrials,1);
 pvios   = zeros(nTrials,1);
 infeas  = zeros(nTrials,1);
 endtime = zeros(nTrials,1);
+successes = zeros(nTrials,1);
 for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
     infeas(nn)  = trial_data(nn).code == 0;
     endtime(nn) = trial_data(nn).t;
+    successes(nn) = trial_data(nn).success;
     vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
     pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
+end
+
+success_rate  = sum(successes) / nTrials
+successes_idx = find(successes == 1);
+if isempty(successes_idx)
+    average_time = 0
+else
+    average_time  = sum([trial_data(successes_idx).t]) / nTrials
 end
 
 sortedTTI  = sort(TTI);
 finished   = sortedTTI(find(sortedTTI < 5.0));
 unfinished = sortedTTI(find(sortedTTI >= 5.0));
 
-fraction_finished   = length(finished) / (nAgents*nTrials)
+fraction_finished   = length(finished) / (nAgents*nTrials);
 fraction_unfinished = 1 - fraction_finished;
 
 fraction_infeasible = sum(infeas) / nTrials;
 
-fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials
+fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials;
 fraction_feasible   = 1 - fraction_infeasible
 
 % fraction_virt_vio   = sum(vvios) / nTrials
@@ -183,10 +193,11 @@ Tfxt      = ones(nAgents,1);
 wHat      = zeros(nAgents,nAgents*nControls);
 thru_time = Inf*ones(nAgents,1);
 success   = zeros(nAgents,1);
-tol       = 0.5;
+tol       = 0.25;
 
 ii = 1;
 nInfeas = 0;
+failure = 0;
 
 % for ii = 1:nTimesteps
 while ii <= nTimesteps
@@ -214,7 +225,7 @@ while ii <= nTimesteps
 %         end
 
         % Set quit flag to true if final goal met
-        if newidx == size(xGoal{aa},1) - 1
+        if newidx == size(xGoal{aa},1)% - 1
             thru_time(aa) = t;
             success(aa) = 1;
         end
@@ -231,7 +242,13 @@ while ii <= nTimesteps
         if old_gidx ~= gidx(aa) || ii == 1
             t0(aa)      = t;
             xS(aa,:)    = xx(aa,1:2); % Old way
-            th0(aa)     = xx(aa,3);
+
+            if strcmp(func2str(dynamics),'double_integrator')
+                th0(aa) = atan2(xx(aa,4),xx(aa,3));
+            else
+                th0(aa) = xx(aa,3);
+            end
+
         end
 
         % Consolidate path segment data and get trajectory info
@@ -313,6 +330,11 @@ while ii <= nTimesteps
 %         break
 %     end
 
+    outside_idx = find(sqrt(sum(squeeze(x(ii,:,1:2))'.^2)) > 20);
+    if sum(success) == nAgents || any(success(outside_idx) == 0)
+        break
+    end
+
     % Update Dynamics
     xdot          = dynamics(t,squeeze(x(ii,:,:)),squeeze(u(ii,:,:)),settings);
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
@@ -327,26 +349,28 @@ while ii <= nTimesteps
 
 end
 
-trial_data = struct('code', data.code, ...
-                    'TTI',  thru_time, ...
-                    'x',    x,         ...  
-                    'u',    u,         ...
-                    'u0',   u0,        ...
-                    't',    t,         ...
-                    'sols', sols,      ...
-                    'vios', violations);
+trial_data = struct('success', sum(success)==nAgents, ...
+                    'code',    data.code,             ...
+                    'TTI',     thru_time,             ...
+                    'x',       x,                     ...  
+                    'u',       u,                     ...
+                    'u0',      u0,                    ...
+                    't',       t,                     ...
+                    'sols',    sols,                  ...
+                    'vios',    violations);
 
 end
 
 function ret = data_content(nTimesteps,nAgents,nStates)
-ret = struct('code', 0,                                 ...
-             'TTI',  Inf*ones(nAgents,1),               ...
-             'sols', zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
-             'vios', zeros(nTimesteps,nAgents,2),       ...
-             'x',    zeros(nTimesteps,nAgents,nStates), ...  
-             'u',    zeros(nTimesteps,nAgents,2),       ...
-             'u0',   zeros(nTimesteps,nAgents,2),       ...
-             't',    0);
+ret = struct('success', 0,                                 ...
+             'code',    0,                                 ...
+             'TTI',     Inf*ones(nAgents,1),               ...
+             'sols',    zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
+             'vios',    zeros(nTimesteps,nAgents,2),       ...
+             'x',       zeros(nTimesteps,nAgents,nStates), ...  
+             'u',       zeros(nTimesteps,nAgents,2),       ...
+             'u0',      zeros(nTimesteps,nAgents,2),       ...
+             't',       0);
 end
 
 function [x0_rand,Tpath] = randomize_ic(x0,Tpath,dyn_mode)

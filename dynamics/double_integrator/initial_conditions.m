@@ -20,10 +20,10 @@ nAgents  = size(x0,1);
 nStates  = size(x0,2);
               
 % Goal Location Setup
-xGoal{1} = [ hlw  -lw;
-             hlw   0.0;
-             0.0   hlw;
-            -lw    hlw;
+xGoal{1} = [ hlw      -lw;
+             hlw       0.0;
+             0.0       hlw;
+            -lw        hlw;
             -(far^2)   hlw];
 xGoal{2} = [-hlw     lw;
             -hlw    -lw;

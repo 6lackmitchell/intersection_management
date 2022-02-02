@@ -74,7 +74,7 @@ ay_unc = 0;
 ax_con = [1 0];
 ay_con = [0 1];
 
-l1 = 3.0;
+l1 = 100.0;
 l0 = l1^2 / 6;
 settings.('l1') = l1;
 settings.('l0') = l0;
@@ -390,7 +390,7 @@ for aa = 1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = 1.0;
+        l0   = 20.0;
         l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)

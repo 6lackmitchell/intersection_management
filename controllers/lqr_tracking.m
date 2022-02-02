@@ -55,6 +55,7 @@ R = eye(size(B,2));
 
 % Compute optimal control
 u = -K*xerr;
+u = round(u,12);
 
 end
 

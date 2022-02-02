@@ -1,5 +1,7 @@
 find(infeas==1)
 find(pvios>0)
+find(successes==0)
+
 clf;
 
 dyn_mode = 'double_integrator';
@@ -19,16 +21,16 @@ tt = linspace(dt,ii*dt,ii);
 
 filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
-for jj = 1:nAgents
-    v_vios = sum(violations(:,jj,1))
-    p_vios = sum(violations(:,jj,2))
-end
+% for jj = 1:nAgents
+%     v_vios = sum(violations(:,jj,1))
+%     p_vios = sum(violations(:,jj,2))
+% end
 
 figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
-    if jj == 2
+    if jj == 1
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,1),'LineWidth',lw)
     end
@@ -41,7 +43,7 @@ figure(3);
 title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
-    if jj == 2
+    if jj == 1
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
     end

@@ -61,6 +61,9 @@ phys_violations = zeros(Na,1);
 % tSlots
 tSlots = settings.tSlots;
 
+Ae = zeros(Na,Nd);
+be = zeros(Na,1);
+
 % Generate Nominal Control Inputs
 for aa = 1:Na
     % Loop Variables
@@ -70,6 +73,12 @@ for aa = 1:Na
     u0  = lqr_tracking(t,x(aa,:),aa,settings);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
+
+    if u0(2) == 0
+        Ae(aa,ctrl_idx) = [-u0(2)/u0(1) 1];
+    else
+        Ae(aa,ctrl_idx) = [1 -u0(1)/u0(2)];
+    end
 end
 
 % Generate "Energy"-based Priority Metric
@@ -85,12 +94,6 @@ safety_settings = struct('Na',        Na,          ...
                          'lookahead', lookahead);
 % Safety Constraints -- Same for comm. and noncomm.
 [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
-Ae = [1 -u00(1)/u00(2) 0 0 0 0 0 0;
-      0 0 1 -u00(3)/u00(4) 0 0 0 0;
-      0 0 0 0 1 -u00(5)/u00(6) 0 0;
-      0 0 0 0 0 0 1 -u00(7)/u00(8)];
-Ae = [Ae zeros(4,4)];
-be = zeros(Na,1);
 
 % Compute values for priority metrics
 power    = 10;
@@ -116,7 +119,7 @@ prior    = priority;
 
 for aa = 1:Na
     % Loop Variables
-    ctrl_idx = aa;
+    ctrl_idx = (-1:0)+aa*Nu;
     
     % Safety-Compensating Decentralized Adaptive Reciprocal Control
     uCost         = [u00; zeros(Ns,1)]; % Zeros for h slack
@@ -138,11 +141,13 @@ for aa = 1:Na
     [Q,p] = priority_cost(uCost,cost_settings);
     LB    = [-repmat(umax,Na,1); zeros(Ns,1)];
     UB    = [ repmat(umax,Na,1); 1*ones(Ns,1)];
+    LB    = -inf*ones(Nd,1);
+    UB    =  inf*ones(Nd,1);
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
     try
-        As = zeros(size(As)); bs = zeros(size(bs));
+%         As = zeros(size(As)); bs = zeros(size(bs));
         [sol,~,exitflag] = solve_quadratic_program(Q,p,As,bs,Ae,be,LB,UB); 
     catch ME
         disp(t)
@@ -161,8 +166,8 @@ for aa = 1:Na
         return 
     end
 
-    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1));
-    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1));
+    ia_virt_cbf = [1];%safety_params.h(end-(factorial(Na-1)-1):end);
+    ia_phys_cbf = [1];%safety_params.h0(end-(factorial(Na-1)-1):end);
 
     virt_violations(aa) = sum(find(ia_virt_cbf < 0));
     phys_violations(aa) = sum(find(ia_phys_cbf < 0));
