@@ -11,7 +11,7 @@
 % Author: Mitchell Black
 % Email: mblackjr@umich.edu
 % Website: http://www.blackmitchell.com
-% Dec 2021; Last revision: 9-Dec-2021
+% Dec 2021; Last revision: 9 -Dec-2021
 
 % Framework Setup
 clc; clear; close all; restoredefaultpath;
@@ -22,6 +22,7 @@ mode           = "Centralized Priority-Cost Allocation";
 % dyn_mode       = "dynamic_bicycle_rdrive_1u";
 dyn_mode       = "double_integrator";
 con_mode       = "lqr_cbf";
+% con_mode       = "ff_cbf";
 cost_mode      = "costs";
 im_used        = 0;
 
@@ -98,27 +99,39 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/',dyn_mode,'/monte_carlo/normal_cbf/no_priority/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/no_priority/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/fcfs/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
+
+filename = strcat('datastore/relaxing_assumptions/',dyn_mode,'/nominal_cbf/no_input_constraints/fcfs/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
 % 01.13.2022
-% to_load  = 'datastore/double_integrator/monte_carlo/normal_cbf/no_priority/lqr_cbf_4MonteCarlo_N1000_centralized_noinputconstraints_a20'
-% load(to_load);
+% to_load  = 'datastore/double_integrator/monte_carlo/normal_cbf/high_effort/ff_cbf_4MonteCarlo_N1000_testing'
+% load(filename);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
 vvios   = zeros(nTrials,1);
 pvios   = zeros(nTrials,1);
 infeas  = zeros(nTrials,1);
+dlock   = zeros(nTrials,1);
 endtime = zeros(nTrials,1);
 successes = zeros(nTrials,1);
+vio_mags  = zeros(nTrials,1);
 for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
     infeas(nn)  = trial_data(nn).code == 0;
+    dlock(nn)   = trial_data(nn).code == -2;
     endtime(nn) = trial_data(nn).t;
     successes(nn) = trial_data(nn).success;
     vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
     pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
+    if pvios(nn) > 0
+        vio_mags(nn) = min(trial_data(nn).vmags);
+    end
 end
 
 success_rate  = sum(successes) / nTrials
@@ -140,11 +153,13 @@ fraction_infeasible = sum(infeas) / nTrials;
 
 fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials;
 fraction_feasible   = 1 - fraction_infeasible
+fraction_deadlock   = sum(dlock) / nTrials
 
 % fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
+avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)))
 
-mean_all            = mean(finished,'all')
+mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 
 
 %% Miscellaneous Helper Functions
@@ -177,6 +192,7 @@ u0         = zeros(nTimesteps,nAgents,nControls);
 sols       = zeros(nTimesteps,nAgents,nAgents*nControls+4);
 priority   = zeros(nTimesteps,nAgents);
 violations = zeros(nTimesteps,nAgents,2);
+vio_mag    = zeros(nTimesteps,1);
 x(1,:,:)   = x0;
 
 % More Settings
@@ -307,6 +323,7 @@ while ii <= nTimesteps
             violations(ii,:) = [data.v_vio; data.p_vio]';
         elseif data.code == -1
             violations(ii,:) = [data.v_vio; data.p_vio]';
+            vio_mag(ii)      = data.vio_mag;
             break
         elseif data.code == 3 || data.code == 4
             if t == dt
@@ -326,6 +343,18 @@ while ii <= nTimesteps
             data.code = 0;
             break
         end
+
+%         deadlock1 = 0;%(sum(xx(:,4).^2) < 0.01);
+%         deadlock2 = 0;
+%         if t > 3
+%             dx = squeeze(x(ii,:,1:2) - x(ii-floor(3/dt),:,1:2));
+%             deadlock2 = any(sum(dx'.^2)<0.1);
+%         end
+% 
+%         if deadlock1 || deadlock2
+%             data.code = -2;
+%             break
+%         end
 
     catch ME
         break
@@ -358,7 +387,8 @@ trial_data = struct('success', sum(success)==nAgents, ...
                     'u0',      u0,                    ...
                     't',       t,                     ...
                     'sols',    sols,                  ...
-                    'vios',    violations);
+                    'vios',    violations,            ...,
+                    'vmags',   vio_mag);
 
 end
 
@@ -368,6 +398,7 @@ ret = struct('success', 0,                                 ...
              'TTI',     Inf*ones(nAgents,1),               ...
              'sols',    zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
              'vios',    zeros(nTimesteps,nAgents,2),       ...
+             'vmags',   zeros(nTimesteps,1),               ...
              'x',       zeros(nTimesteps,nAgents,nStates), ...  
              'u',       zeros(nTimesteps,nAgents,2),       ...
              'u0',      zeros(nTimesteps,nAgents,2),       ...

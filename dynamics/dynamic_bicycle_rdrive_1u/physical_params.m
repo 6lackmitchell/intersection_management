@@ -17,5 +17,5 @@ nControls = 2;
 
 wmax      = 4*pi;
 amax      = 2 * G;
-% amax      = 1 * G;
+amax      = 1 * G;
 umax      = [wmax; amax];

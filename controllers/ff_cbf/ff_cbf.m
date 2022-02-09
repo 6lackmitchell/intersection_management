@@ -68,7 +68,7 @@ for aa = 1:Na
     ctrl_idx = (-1:0)+aa*Nu;
             
     % Generate nominal control input from trajectory tracking controller
-    u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings);
+    u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 
@@ -89,14 +89,19 @@ safety_settings = struct('Na',        Na,          ...
 [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
 
 % Compute values for priority metrics
-power    = 10;
+power    = 10;%2;
 xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
 h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
 Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
 
 % Compute priority
-metric_settings = struct('metric',  'None',        ...
+% metric = 'None';
+% metric = 'FCFS';
+% metric = 'HighDev';
+% metric = 'LowDev';
+metric = 'HighEffort';
+metric_settings = struct('metric',  metric,        ...
                          'power',   power,         ...
                          'xdot',    [xdot ydot],   ...
                          'xdes',    settings.r,    ...
@@ -112,10 +117,10 @@ prior    = priority;
 
 for aa = 1:Na
     % Loop Variables
-    ctrl_idx = (-1:0)+aa*Nu;
+    ctrl_idx = aa;%(-1:0)+aa*Nu;
     
     % Safety-Compensating Decentralized Adaptive Reciprocal Control
-    uCost         = [u00; zeros(Ns,1)]; % Zeros for h slack
+    uCost         = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
 
     % Priority / Nominal Control -- different for comm. v noncomm.
     if aa >= Na - (Nn - 1)
@@ -123,7 +128,9 @@ for aa = 1:Na
 %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
 
         % Recompute safety w/ model of noncommunicating uCost
-        safety_settings.uNom  = uCost(1:Na*Nu);
+        uSafety = u00;
+        uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
+        safety_settings.uNom  = uSafety;
         [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
 
         % Reassign no priority
@@ -131,23 +138,23 @@ for aa = 1:Na
     end
 
     d = 1; % Param for relaxation of speed limit
-    q = [repmat(params.qu,Na,1); d*ones(Ns,1)];
-    cost_settings = struct('Nu',    Na*Nu + Ns,    ...
+    q = [repmat(params.qu(2),Na,1); d*ones(Ns,1)];
+    cost_settings = struct('Nu',    Na*(Nu-1) + Ns,    ...
                            'Na',    Na,       ...
                            'q',     q,        ...
                            'idx',   ctrl_idx, ...
                            'k',     priority);
     [Q,p] = priority_cost(uCost,cost_settings);
-    LB    = [-repmat(umax,Na,1); zeros(Ns,1)];
-    UB    = [ repmat(umax,Na,1); 1*ones(Ns,1)];
-    LB    = -inf*ones(Nd,1);
-    UB    =  inf*ones(Nd,1);
+    LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
+    UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
+%     LB    = [-100*ones(Na,1);  zeros(Ns,1)];
+%     UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
     try
 %         As = zeros(size(As)); bs = zeros(size(bs));
-        [sol,~,exitflag] = solve_quadratic_program(Q,p,As,bs,Ae,be,LB,UB); 
+        [sol,~,exitflag] = solve_quadratic_program(Q,p,As,bs,[],[],LB,UB); 
     catch ME
         disp(t)
         disp(ME.message)
@@ -165,22 +172,23 @@ for aa = 1:Na
         return 
     end
 
-    ia_virt_cbf = [1];%safety_params.h(end-(factorial(Na-1)-1):end);
-    ia_phys_cbf = [1];%safety_params.h0(end-(factorial(Na-1)-1):end);
+    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
+    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
 
     virt_violations(aa) = sum(find(ia_virt_cbf < 0));
     phys_violations(aa) = sum(find(ia_phys_cbf < 0));
     if phys_violations(aa) > 0
         disp('Physical Barrier Violated')
-        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations);
+        vio_magnitude = min(ia_phys_cbf);
+        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
         return
     end
            
-    u(aa,:)     = sol((-1:0)+aa*Nu);
+    u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
     uLast(aa,:) = u(aa,:);
-    uNom(aa,:)  = u00(ctrl_idx);
+    uNom(aa,:)  = u00((-1:0)+aa*Nu);
     mincbf(aa)  = min([safety_params.h; 100]);
-    sols(aa,:)  = sol;
+    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',Na*Nu+Ns,1);
 
 end
 

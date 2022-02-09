@@ -53,7 +53,7 @@ for oo = 1:length(obstacles)
     plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
 end
 for ii=1:1:nAgents
-    if dyn_mode == 'double_integrator'
+    if strcmp(dyn_mode,'double_integrator')
         th = atan2(x(1,ii,4),x(1,ii,3));
         cx1 = x(1,ii,1);
         cy1 = x(1,ii,2);
@@ -113,7 +113,7 @@ for tt=1:(1/(50*dt)):maxsteps
         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
     end
     for ii=1:1:nAgents
-        if dyn_mode == 'double_integrator'
+        if strcmp(dyn_mode,'double_integrator')
             th = atan2(x(1,ii,4),x(1,ii,3));
             cx1 = x(tt,ii,1);
             cy1 = x(tt,ii,2);

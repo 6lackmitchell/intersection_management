@@ -105,14 +105,22 @@ safety_settings = struct('Na',        Na,          ...
 [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
 
 % Compute values for priority metrics
-power    = 10;
+power    = 2;
 xdot     = x(:,3);
 ydot     = x(:,4);
 h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
 Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
 
+
 % Compute priority
-metric_settings = struct('metric',  'None',        ...
+% metric = 'None';
+metric = 'FCFS';
+% metric = 'FCFS_V';
+% metric = 'HighDev';
+% metric = 'LowDev';
+% metric = 'HighEffort';
+% metric = 'LowEffort';
+metric_settings = struct('metric',  metric,        ...
                          'power',   power,         ...
                          'xdot',    [xdot ydot],   ...
                          'xdes',    settings.r,    ...

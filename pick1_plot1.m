@@ -1,12 +1,14 @@
 find(infeas==1)
 find(pvios>0)
 find(successes==0)
+find(dlock>0)
 
 clf;
 
 dyn_mode = 'double_integrator';
+% dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(98);
+data = trial_data(4);
 code = data.code;
 t = data.t;
 dt = 0.01;

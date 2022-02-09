@@ -12,7 +12,7 @@ settings.('lw')   = 3.0;
 v00 = zeros(Na*settings.Nu,1);
 h00 = inf*ones(Na,1);
 
-nCons = 3;
+nCons = 4;
 nRows = nCons*Na+settings.Ns;
 nCols = settings.Nu*Na+settings.Ns;
 
@@ -59,6 +59,7 @@ lw = settings.lw;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Lr = 1;
 
 xx = x(aa,:);
 A = zeros(2,Nu*Na+Ns);
@@ -70,7 +71,7 @@ vy = xx(4)*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
 
 % ax and ay
 ax_unc = -xx(4)^2/Lr*tan(xx(5))*(sin(xx(3)) + cos(xx(3))*tan(xx(5)));
-ay_unc =  xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
+ay_unc = -xx(4)^2/Lr*tan(xx(5))*(cos(xx(3)) - sin(xx(3))*tan(xx(5)));
 ax_con = [cos(xx(3))-sin(xx(3))*tan(xx(5))]';
 ay_con = [sin(xx(3))+cos(xx(3))*tan(xx(5))]';
 
@@ -312,6 +313,7 @@ Ns    = settings.Ns;
 tmax  = settings.lookahead;
 uNom  = settings.uNom;
 
+Lr = 1;
 sw = 1.0;
 
 betadot = uNom(1:2:end);
@@ -370,8 +372,8 @@ for aa = 1:Na
         % accelerations -- controlled (con) and uncontrolled (unc)
         axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5))) - betadot(aa)*xa(4)*sin(xa(3))*sec(xa(5))^2;
         axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5))) - betadot(ii)*xi(4)*sin(xi(3))*sec(xi(5))^2;
-        aya_unc = -xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
-        ayi_unc = -xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
+        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5))) + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
+        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5))) + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
         axa_con = zeros(1,Na*Nu);
         axi_con = zeros(1,Na*Nu);
         aya_con = zeros(1,Na*Nu);
@@ -399,7 +401,8 @@ for aa = 1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = 20.0;
+        l0   = 10.0;
+%         l0   = 20.0;
         l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)
@@ -414,16 +417,30 @@ for aa = 1:Na
         LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
         LgH = 2*(dx*dax_con + dy*day_con);
 
-%         % FF-CBF
+% %         % FF-CBF
 %         H   = h;
 %         LfH = Lfh;
 %         LgH = Lgh;
 
 %         % Robust-Virtual CBF
-%         alpha = 0.1;
-%         H     = h + alpha*h0;
-%         LfH   = Lfh + alpha*Lfh0;
-%         LgH   = Lgh;
+%         hm = max([h,0]);
+%         a1 = (1-exp(-l0*hm)); % This formulation does not work because hh
+%         and h0 may have conflicting control directions, which would lead
+%         to zero control action when in fact one would need to either
+%         brake or accelerate
+%         a2 = exp(-l0*hm);
+%         Lfh0 = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+%         Lgh0 = 2*(dx*dax_con + dy*day_con);
+%         H     = a1*h   + a2*h0;
+%         LfH   = a1*Lfh + a2*Lfh0;
+%         LgH   = a1*Lgh + a2*Lfh0;
+
+%         % Robust-Virtual CBF
+%         a1    = 1;
+%         a2    = 1;
+%         H     = a1*h   + a2*h0;
+%         LfH   = a1*Lfh + a2*Lfh0;
+%         LgH   = a1*Lgh;
     
         % Inequalities: Ax <= b
         Aw(dd,1:Na*Nu)  = -LgH;
