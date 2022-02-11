@@ -80,7 +80,7 @@ parfor nn = 1:nTrials
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
     t_params    = struct('nTimesteps',nTimesteps,'ti',ti,'tf',tf,'dt',dt);
-    settings    = struct('x0',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
+    settings    = struct('x0',x0,'x0i',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
     trial_setup = struct('dynamics',   dynamics,   ...
                          'controller', controller, ...
                          'u_params',   u_params,   ...
@@ -105,7 +105,7 @@ beep
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 
-filename = strcat('datastore/relaxing_assumptions/',dyn_mode,'/nominal_cbf/no_input_constraints/fcfs/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/relaxing_assumptions/',dyn_mode,'/nominal_cbf/input_constraints/low_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -124,8 +124,8 @@ vio_mags  = zeros(nTrials,1);
 for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
     infeas(nn)  = trial_data(nn).code == 0;
-    dlock(nn)   = trial_data(nn).code == -2;
     endtime(nn) = trial_data(nn).t;
+    dlock(nn)   = endtime(nn) == 20;
     successes(nn) = trial_data(nn).success;
     vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
     pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
@@ -139,7 +139,7 @@ successes_idx = find(successes == 1);
 if isempty(successes_idx)
     average_time = 0
 else
-    average_time  = sum([trial_data(successes_idx).t]) / nTrials
+    average_time  = sum([trial_data(successes_idx).t]) / sum(successes)
 end
 
 sortedTTI  = sort(TTI);
@@ -177,7 +177,8 @@ nAgents    = misc_params.nAgents;
 nStates    = misc_params.nStates;
 nControls  = misc_params.nControls;
 nNon       = misc_params.nNon;
-x0         = misc_params.x0;
+x0_og      = misc_params.x0;
+x0         = misc_params.x0i;
 Tpath      = misc_params.Tpath;
 Rpath      = misc_params.Rpath;
 path       = misc_params.path;
@@ -321,22 +322,16 @@ while ii <= nTimesteps
             wHat            = data.wHat;
             priority(ii,:)  = data.prior;
             violations(ii,:) = [data.v_vio; data.p_vio]';
+        elseif t == dt
+            [x0_new,Tpath_new]  = randomize_ic(x0_og,Tpath,func2str(dynamics));
+            x(ii,:,:) = x0_new;
+            Tpath = Tpath_new;
+            continue
         elseif data.code == -1
             violations(ii,:) = [data.v_vio; data.p_vio]';
             vio_mag(ii)      = data.vio_mag;
             break
         elseif data.code == 3 || data.code == 4
-            if t == dt
-                [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,func2str(dynamics));
-                x(ii,:,:) = x0_new;
-                Tpath = Tpath_new;
-                nInfeas = nInfeas + 1
-                if nInfeas >= 10
-                    data.code = 0;
-                    break
-                end
-                continue
-            end
             data.code = 0;
             break
         else
@@ -426,7 +421,7 @@ function [x0_rand,Tpath] = randomize_ic(x0,Tpath,dyn_mode)
         end
     
         % Random speed
-        if dyn_mode ~= 'double_integrator'
+        if ~strcmp(dyn_mode,'double_integrator')
             x0_rand(aa,4) = x0(aa,4) + rand_speed;
         else
             if abs(x0(aa,2)) == 1.5

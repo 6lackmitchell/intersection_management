@@ -287,9 +287,11 @@ Lfhf    = 0;
 Lghf    = [-1];
 
 kr      = kf;
-hr      = xx(4);
+% hr      = 100; % Reverse allowed
+hr      = xx(4); % Reverse not allowed
 Lfhr    = 0;
-Lghr    = [1];
+% Lghr    = [0]; % Reverse allowed
+Lghr    = [1]; % Reverse not allowed
 
 A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);

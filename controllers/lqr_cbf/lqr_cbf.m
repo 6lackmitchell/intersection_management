@@ -114,12 +114,12 @@ Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
 
 % Compute priority
 % metric = 'None';
-metric = 'FCFS';
+% metric = 'FCFS';
 % metric = 'FCFS_V';
 % metric = 'HighDev';
 % metric = 'LowDev';
 % metric = 'HighEffort';
-% metric = 'LowEffort';
+metric = 'LowEffort';
 metric_settings = struct('metric',  metric,        ...
                          'power',   power,         ...
                          'xdot',    [xdot ydot],   ...
@@ -158,8 +158,8 @@ for aa = 1:Na
     [Q,p] = priority_cost(uCost,cost_settings);
     LB    = [-repmat(umax,Na,1); zeros(Ns,1)];
     UB    = [ repmat(umax,Na,1); 1*ones(Ns,1)];
-    LB    = -inf*ones(Nd,1);
-    UB    =  inf*ones(Nd,1);
+%     LB    = -100*ones(Nd,1);
+%     UB    =  100*ones(Nd,1);
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b

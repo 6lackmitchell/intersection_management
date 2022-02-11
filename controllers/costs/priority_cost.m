@@ -13,7 +13,7 @@ p = [-2*ones(Nu,1).*u_nom.*q(1:Nu)];
 
 for ii = 1:length(p)
     if ii <= 2*Na
-%         % Nu = 2
+        % Nu = 2
         Q(ii,ii) = k(ceil(ii/2))*Q(ii,ii);
         p(ii)    = k(ceil(ii/2))*p(ii);
 
