@@ -18,17 +18,16 @@ clc; clear; close all; restoredefaultpath;
 
 % Dynamics and Controller modes
 mode           = "Centralized Priority-Cost Allocation";
-% dyn_mode       = "dynamic_bicycle_rdrive";
-% dyn_mode       = "dynamic_bicycle_rdrive_1u";
-dyn_mode       = "double_integrator";
-con_mode       = "lqr_cbf";
-% con_mode       = "ff_cbf";
+dyn_mode       = "dynamic_bicycle_rdrive_1u";
+% dyn_mode       = "double_integrator";
+% con_mode       = "lqr_cbf";
+con_mode       = "ap_cbf";
 cost_mode      = "costs";
 im_used        = 0;
 
 % Add Desired Paths
-% addpath '/Library/gurobi912/mac64/matlab'; % For mac
-addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
+addpath '/Library/gurobi912/mac64/matlab'; % For mac
+% addpath 'C:\gurobi950\win64\matlab'; % For Thinkstation
 folders = {'controllers','datastore','dynamics','helpers','settings'};
 for ff = 1:length(folders)
     addpath(folders{ff})
@@ -57,7 +56,7 @@ u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
 nTrials        = 1000;
-nNon           = 0;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -80,7 +79,7 @@ parfor nn = 1:nTrials
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
     t_params    = struct('nTimesteps',nTimesteps,'ti',ti,'tf',tf,'dt',dt);
-    settings    = struct('x0',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
+    settings    = struct('x0',x0,'x0i',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
     trial_setup = struct('dynamics',   dynamics,   ...
                          'controller', controller, ...
                          'u_params',   u_params,   ...
@@ -105,7 +104,7 @@ beep
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 
-filename = strcat('datastore/relaxing_assumptions/',dyn_mode,'/nominal_cbf/no_input_constraints/fcfs/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/adaptive_decentralized_reciprocal_follower/',dyn_mode,'/ff_cbf/no_input_constraints/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -177,7 +176,8 @@ nAgents    = misc_params.nAgents;
 nStates    = misc_params.nStates;
 nControls  = misc_params.nControls;
 nNon       = misc_params.nNon;
-x0         = misc_params.x0;
+x0_og      = misc_params.x0;
+x0         = misc_params.x0i;
 Tpath      = misc_params.Tpath;
 Rpath      = misc_params.Rpath;
 path       = misc_params.path;
@@ -189,7 +189,7 @@ SL         = misc_params.SL;
 x          = zeros(nTimesteps,nAgents,nStates);
 u          = zeros(nTimesteps,nAgents,nControls);
 u0         = zeros(nTimesteps,nAgents,nControls);
-sols       = zeros(nTimesteps,nAgents,nAgents*nControls+4);
+sols       = zeros(nTimesteps,nAgents,nAgents*nControls+4+6);
 priority   = zeros(nTimesteps,nAgents);
 violations = zeros(nTimesteps,nAgents,2);
 vio_mag    = zeros(nTimesteps,1);
@@ -212,8 +212,8 @@ success   = zeros(nAgents,1);
 tol       = 0.25;
 
 ii = 1;
-nInfeas = 0;
-failure = 0;
+nAttempts = 0;
+flip    = 0;
 
 % for ii = 1:nTimesteps
 while ii <= nTimesteps
@@ -292,6 +292,7 @@ while ii <= nTimesteps
     end
 
     settings          = struct('dynamics', @dynamics,...
+                               'dmode',    func2str(dynamics), ...
                                'uLast',    uLast,    ...
                                'tSlots',   tSlots ,  ...
                                'wHat',     wHat,     ...
@@ -304,12 +305,19 @@ while ii <= nTimesteps
                                't0',       t0,       ...
                                'prior',    priority(max(ii-1,1),:), ...
                                'Nn',       nNon, ...
-                               'dt',       dt);
+                               'dt',       dt,   ...
+                               'flip',     flip);
     try
         % Compute control input
         data         = controller(t,xx,settings,u_params);
+        if data.code == 3 || data.code == 4 && (t ~= dt)
+            flip = 1;
+            settings.('flip') = flip;
+            data = controller(t,xx,settings,u_params);
+        end
 
         if data.code == 1
+            flip = 0;
 
             % Organize data
             u(ii,:,:)       = data.u;
@@ -321,22 +329,27 @@ while ii <= nTimesteps
             wHat            = data.wHat;
             priority(ii,:)  = data.prior;
             violations(ii,:) = [data.v_vio; data.p_vio]';
+        elseif t < dt*5
+            [x0_new,Tpath_new]  = randomize_ic(x0_og,Tpath,func2str(dynamics));
+            x(ii,:,:) = x0_new;
+            Tpath = Tpath_new;
+            continue
         elseif data.code == -1
             violations(ii,:) = [data.v_vio; data.p_vio]';
             vio_mag(ii)      = data.vio_mag;
             break
         elseif data.code == 3 || data.code == 4
-            if t == dt
-                [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,func2str(dynamics));
-                x(ii,:,:) = x0_new;
-                Tpath = Tpath_new;
-                nInfeas = nInfeas + 1
-                if nInfeas >= 10
-                    data.code = 0;
-                    break
-                end
-                continue
-            end
+%             if t == dt
+%                 [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,func2str(dynamics));
+%                 x(ii,:,:) = x0_new;
+%                 Tpath = Tpath_new;
+%                 nAttempts = nAttempts + 1
+%                 if nAttempts >= 10
+%                     data.code = 0;
+%                     break
+%                 end
+%                 continue
+%             end
             data.code = 0;
             break
         else
@@ -426,7 +439,7 @@ function [x0_rand,Tpath] = randomize_ic(x0,Tpath,dyn_mode)
         end
     
         % Random speed
-        if dyn_mode ~= 'double_integrator'
+        if ~strcmp(dyn_mode,'double_integrator')
             x0_rand(aa,4) = x0(aa,4) + rand_speed;
         else
             if abs(x0(aa,2)) == 1.5

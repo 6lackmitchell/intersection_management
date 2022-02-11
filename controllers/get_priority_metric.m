@@ -84,7 +84,8 @@ end
 priority = zeros(settings.Na,1);
 for aa = 1:settings.Na
 %     priority(idxLF(aa)) = settings.power^(aa-1);
-    priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
+    priority(idxLF(aa)) = max([0.1,settings.power*LF(aa)^2/(sum(LF.^2))]);
+    
 end
 
 
