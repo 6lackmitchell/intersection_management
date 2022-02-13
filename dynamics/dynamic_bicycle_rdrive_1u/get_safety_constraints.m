@@ -414,15 +414,18 @@ for aa = 1:Na
         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
        
-        % Standard CBF (Rel-Deg 2)
-        H   = h0;
-        LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
-        LgH = 2*(dx*dax_con + dy*day_con);
-
-% %         % FF-CBF
-%         H   = h;
-%         LfH = Lfh;
-%         LgH = Lgh;
+%         if 0%tau < 1
+%             % Standard CBF (Rel-Deg 2)
+%             H   = h0;
+%             LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+%             LgH = 2*(dx*dax_con + dy*day_con);
+%         else
+%             % FF-CBF
+%             l0  = h0;
+%             H   = h;
+%             LfH = Lfh;
+%             LgH = Lgh;
+%         end
 
 %         % Robust-Virtual CBF
 %         hm = max([h,0]);
@@ -437,12 +440,12 @@ for aa = 1:Na
 %         LfH   = a1*Lfh + a2*Lfh0;
 %         LgH   = a1*Lgh + a2*Lfh0;
 
-%         % Robust-Virtual CBF
-%         a1    = 1;
-%         a2    = 1;
-%         H     = a1*h   + a2*h0;
-%         LfH   = a1*Lfh + a2*Lfh0;
-%         LgH   = a1*Lgh;
+        % Robust-Virtual CBF
+        a1    = 1;
+        a2    = 0.01;
+        H     = a1*h   + a2*h0;
+        LfH   = a1*Lfh + a2*Lfh0;
+        LgH   = a1*Lgh;
     
         % Inequalities: Ax <= b
         Aw(dd,1:Na*Nu)  = -LgH;

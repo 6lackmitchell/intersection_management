@@ -19,10 +19,10 @@ clc; clear; close all; restoredefaultpath;
 % Dynamics and Controller modes
 mode           = "Centralized Priority-Cost Allocation";
 % dyn_mode       = "dynamic_bicycle_rdrive";
-% dyn_mode       = "dynamic_bicycle_rdrive_1u";
-dyn_mode       = "double_integrator";
-con_mode       = "lqr_cbf";
-% con_mode       = "ff_cbf";
+dyn_mode       = "dynamic_bicycle_rdrive_1u";
+% dyn_mode       = "double_integrator";
+% con_mode       = "lqr_cbf";
+con_mode       = "ff_cbf";
 cost_mode      = "costs";
 im_used        = 0;
 
@@ -56,7 +56,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 1000;
+nTrials        = 25;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -105,7 +105,7 @@ beep
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 
-filename = strcat('datastore/relaxing_assumptions/',dyn_mode,'/nominal_cbf/input_constraints/low_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/adaptive_reciprocal_follower/',dyn_mode,'/switching_cbf/no_backup/input_constraints/high_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
