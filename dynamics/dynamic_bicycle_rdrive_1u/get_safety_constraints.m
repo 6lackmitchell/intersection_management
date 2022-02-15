@@ -21,7 +21,7 @@ b  = zeros(nRows,1);
 h  = zeros(nRows,1);
 h0 = zeros(nRows,1);
 
-for aa = 1:Na
+for aa = settings.AAA%1:Na
     
     settings.('aa') = aa;
     
@@ -331,10 +331,11 @@ cc  = 1;
 ss  = 1;
 
 % Loop through every scheduled agent for PCCA
-for aa = 1:Na
+for aa = settings.AAA%1:Na
     
 %     Aw = []; bw = []; hw = [];
-    nc  = Na-aa;
+%     nc  = Na-aa; % THIS NEEDS TO BE UNCOMMENTED
+    nc  = Na;
     Aw  = zeros(nc,Nu*Na+Ns);
     bw  = zeros(nc,1);
     hw  = zeros(nc,1);
@@ -342,7 +343,11 @@ for aa = 1:Na
     dd  = 1;
     
     % Loop through all other agents for interagent completeness
-    for ii = aa+1:Na
+    for ii = 1:Na
+        if ii == aa
+            continue
+        end
+%     for ii = aa+1:Na
         
         xa = x(aa,:);
         xi = x(ii,:);
@@ -381,9 +386,9 @@ for aa = 1:Na
         aya_con = zeros(1,Na*Nu);
         ayi_con = zeros(1,Na*Nu);
         axa_con(idx_aa) = cos(xa(3))-sin(xa(3))*tan(xa(5));
-        axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5));
+%         axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5)); % THIS NEEDS TO BE UNCOMMENTED
         aya_con(idx_aa) = sin(xa(3))+cos(xa(3))*tan(xa(5));
-        ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5)); 
+%         ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5));  % THIS NEEDS TO BE UNCOMMENTED
         
         % dax and day
         dax_unc = axa_unc - axi_unc;
@@ -404,6 +409,7 @@ for aa = 1:Na
 
         % Class K Function(s)
         l0   = 10.0;
+%         l0   = 1.0;
 %         l0   = 20.0;
         l1   = sqrt(6*l0);
         
@@ -414,18 +420,16 @@ for aa = 1:Na
         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
        
-%         if 0%tau < 1
-%             % Standard CBF (Rel-Deg 2)
-%             H   = h0;
-%             LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
-%             LgH = 2*(dx*dax_con + dy*day_con);
-%         else
-%             % FF-CBF
-%             l0  = h0;
-%             H   = h;
-%             LfH = Lfh;
-%             LgH = Lgh;
-%         end
+        % Standard CBF (Rel-Deg 2)
+        H   = h0;
+        LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+        LgH = 2*(dx*dax_con + dy*day_con);
+
+%         % FF-CBF
+%         l0  = h0;
+%         H   = h;
+%         LfH = Lfh;
+%         LgH = Lgh;
 
 %         % Robust-Virtual CBF
 %         hm = max([h,0]);
@@ -440,12 +444,12 @@ for aa = 1:Na
 %         LfH   = a1*Lfh + a2*Lfh0;
 %         LgH   = a1*Lgh + a2*Lfh0;
 
-        % Robust-Virtual CBF
-        a1    = 1;
-        a2    = 0.01;
-        H     = a1*h   + a2*h0;
-        LfH   = a1*Lfh + a2*Lfh0;
-        LgH   = a1*Lgh;
+%         % Robust-Virtual CBF
+%         a1    = 1;
+%         a2    = 0.01;
+%         H     = a1*h   + a2*h0;
+%         LfH   = a1*Lfh + a2*Lfh0;
+%         LgH   = a1*Lgh;
     
         % Inequalities: Ax <= b
         Aw(dd,1:Na*Nu)  = -LgH;

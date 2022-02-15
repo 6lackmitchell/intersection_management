@@ -62,7 +62,23 @@ phys_violations = zeros(Na,1);
 % tSlots
 tSlots = settings.tSlots;
 
-% Generate Nominal Control Inputs
+% % Generate Nominal Control Inputs
+% for aa = 1:Na
+%     % Loop Variables
+%     ctrl_idx = (-1:0)+aa*Nu;
+%             
+%     % Generate nominal control input from trajectory tracking controller
+%     u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
+%     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
+%     u00(ctrl_idx) = u0;
+% 
+% end
+
+% Compute values for priority metrics
+power    = 2;
+xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
+ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
+
 for aa = 1:Na
     % Loop Variables
     ctrl_idx = (-1:0)+aa*Nu;
@@ -71,73 +87,46 @@ for aa = 1:Na
     u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
-
-end
-
-% Generate "Energy"-based Priority Metric
-lookahead       = 1.0;
-safety_settings = struct('Na',        Na,          ...
-                         'Nn',        Nn,          ...
-                         'Ns',        Ns,          ...
-                         'SL',        settings.SL, ...
-                         'AAA',       aa,          ...
-                         'vEst',      uLast,       ...
-                         'uNom',      u00,         ...
-                         'tSlots',    tSlots,      ...
-                         'lookahead', lookahead);
-% Safety Constraints -- Same for comm. and noncomm.
-[As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
-
-% Compute values for priority metrics
-power    = 2;
-xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
-ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
-h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
-Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
-
-% Compute priority
-% metric = 'None';
-% metric = 'FCFS';
-% metric = 'FCFS_V';
-% metric = 'HighDev';
-% metric = 'LowDev';
-metric = 'HighEffort';
-% metric = 'LowEffort';
-metric_settings = struct('metric',  metric,        ...
-                         'power',   power,         ...
-                         'xdot',    [xdot ydot],   ...
-                         'xdes',    settings.r,    ...
-                         'xdesdot', settings.rdot, ...
-                         'h',       h_metric,      ...
-                         'Lgh',     Lgh,           ...
-                         'prior',   prior,         ...
-                         'Na',      Na,            ...
-                         'dt',      settings.dt);
-priority = get_priority_metric(t,x,metric_settings);
-prior    = priority;
-
-
-for aa = 1:Na
-    % Loop Variables
-    ctrl_idx = aa;%(-1:0)+aa*Nu;
     
     % Safety-Compensating Decentralized Adaptive Reciprocal Control
-    uCost         = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
+    uSafety           = zeros(Na*Nu,1);
+    uSafety(ctrl_idx) = u0;
+    uCost             = zeros(Na+Ns,1);
+    uCost(aa)         = u0(2);
 
-    % Priority / Nominal Control -- different for comm. v noncomm.
-    if aa >= Na - (Nn - 1)
-        uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
-%         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
+    % Generate "Energy"-based Priority Metric
+    lookahead       = 1.0;
+    safety_settings = struct('Na',        Na,          ...
+                             'Nn',        Nn,          ...
+                             'Ns',        Ns,          ...
+                             'SL',        settings.SL, ...
+                             'AAA',       aa,          ...
+                             'vEst',      uLast,       ...
+                             'uNom',      uSafety,         ...
+                             'tSlots',    tSlots,      ...
+                             'lookahead', lookahead);
+    % Safety Constraints -- Same for comm. and noncomm.
+    [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
 
-        % Recompute safety w/ model of noncommunicating uCost
-        uSafety = u00;
-        uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
-        safety_settings.uNom  = uSafety;
-        [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
-
-        % Reassign no priority
-        priority = ones(Na,1);
-    end
+    % Compute priority
+    h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
+    Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
+    metric = 'None';
+%     metric = 'FCFS';
+%     metric = 'HighEffort';
+    metric_settings = struct('metric',  metric,        ...
+                             'power',   power,         ...
+                             'xdot',    [xdot ydot],   ...
+                             'xdes',    settings.r,    ...
+                             'xdesdot', settings.rdot, ...
+                             'h',       h_metric,      ...
+                             'Lgh',     Lgh,           ...
+                             'prior',   prior,         ...
+                             'Na',      Na,            ...
+                             'dt',      settings.dt);
+    priority = get_priority_metric(t,x,metric_settings);
+    % priority = ones(Na,1);
+    prior    = priority;
 
     d = 1; % Param for relaxation of speed limit
     q = [repmat(params.qu(2),Na,1); d*ones(Ns,1)];
@@ -149,8 +138,8 @@ for aa = 1:Na
     [Q,p] = priority_cost(uCost,cost_settings);
     LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
     UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
-    LB    = [-100*ones(Na,1);  zeros(Ns,1)];
-    UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
+%     LB    = [-100*ones(Na,1);  zeros(Ns,1)];
+%     UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b

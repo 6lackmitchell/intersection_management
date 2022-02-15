@@ -1,5 +1,5 @@
 clear; clc; 
-filename = strcat('datastore/relaxing_assumptions/dynamic_bicycle_rdrive_1u/nominal_cbf/no_backup_allowed/input_constraints/no_priority/ff_cbf_4MonteCarlo_N1000.mat');
+filename = strcat('datastore/decentralized/dynamic_bicycle_rdrive_1u/nominal_cbf/no_backup/no_input_constraints/high_energy/ff_cbf_4MonteCarlo_N1000.mat');
 
 load(filename);
 
@@ -48,6 +48,7 @@ fraction_deadlock   = sum(dlock) / nTrials
 % fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
 avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)))
+max_phys_vio        = max(abs(vio_mags(find(vio_mags < 0))))
 
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 

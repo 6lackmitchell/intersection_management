@@ -56,7 +56,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 25;
+nTrials        = 1000;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -99,13 +99,7 @@ toc
 beep
 
 %% Save Simulation Results
-% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/no_priority/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
-% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/fcfs/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
-% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
-% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
-% filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
-
-filename = strcat('datastore/adaptive_reciprocal_follower/',dyn_mode,'/switching_cbf/no_backup/input_constraints/high_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/robust_virtual/',dyn_mode,'/no_backup/input_constraints/nominal_cbf/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_a1.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -158,6 +152,7 @@ fraction_deadlock   = sum(dlock) / nTrials
 % fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
 avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)))
+max_phys_vio        = max(abs(vio_mags(find(vio_mags < 0))))
 
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 

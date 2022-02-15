@@ -8,7 +8,7 @@ clf;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(4);
+data = trial_data(3);
 code = data.code;
 t = data.t;
 dt = 0.01;
