@@ -105,7 +105,7 @@ beep
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 
-filename = strcat('datastore/one_noncommunicating/',dyn_mode,'/no_backup/input_constraints/no_pcca/d_css/nominal_cbf/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/one_noncommunicating/',dyn_mode,'/no_backup/input_constraints/no_pcca/d_css/nominal_cbf/high_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -157,7 +157,8 @@ fraction_deadlock   = sum(dlock) / nTrials
 
 % fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
-avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)))
+avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)));
+max_phy_vio         = max(abs(vio_mags(find(vio_mags < 0))))
 
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 

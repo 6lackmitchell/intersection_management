@@ -108,12 +108,12 @@ h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
 Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
 
 % Compute priority
-metric = 'None';
+% metric = 'None';
 % metric = 'FCFS';
 % metric = 'FCFS_V';
 % metric = 'HighDev';
 % metric = 'LowDev';
-% metric = 'HighEffort';
+metric = 'HighEffort';
 % metric = 'LowEffort';
 metric_settings = struct('metric',  metric,        ...
                          'power',   power,         ...
