@@ -75,7 +75,7 @@ for aa = 1:Na
 end
 
 % Generate "Energy"-based Priority Metric
-lookahead       = 1.0;
+lookahead       = 5.0;
 safety_settings = struct('Na',        Na,          ...
                          'Nn',        Nn,          ...
                          'Ns',        Ns,          ...
@@ -88,6 +88,18 @@ safety_settings = struct('Na',        Na,          ...
 % Safety Constraints -- Same for comm. and noncomm.
 [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
 
+% Check for safety violations
+ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
+ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
+virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+if phys_violations(aa) > 0
+    disp('Physical Barrier Violated')
+    vio_magnitude = min(ia_phys_cbf);
+    data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
+    return
+end
+
 % Compute values for priority metrics
 power    = 2;
 xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
@@ -96,12 +108,12 @@ h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
 Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
 
 % Compute priority
-% metric = 'None';
+metric = 'None';
 % metric = 'FCFS';
 % metric = 'FCFS_V';
 % metric = 'HighDev';
 % metric = 'LowDev';
-metric = 'HighEffort';
+% metric = 'HighEffort';
 % metric = 'LowEffort';
 metric_settings = struct('metric',  metric,        ...
                          'power',   power,         ...
@@ -149,8 +161,8 @@ for aa = 1:Na
     [Q,p] = priority_cost(uCost,cost_settings);
     LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
     UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
-    LB    = [-100*ones(Na,1);  zeros(Ns,1)];
-    UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
+%     LB    = [-100*ones(Na,1);  zeros(Ns,1)];
+%     UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
@@ -172,18 +184,6 @@ for aa = 1:Na
         disp('Error');
         data = struct('code',exitflag);
         return 
-    end
-
-    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
-    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
-
-    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
-    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
-    if phys_violations(aa) > 0
-        disp('Physical Barrier Violated')
-        vio_magnitude = min(ia_phys_cbf);
-        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
-        return
     end
            
     u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
