@@ -132,12 +132,37 @@ prior    = priority;
 for aa = 1:Na
     % Loop Variables
     ctrl_idx = aa;%(-1:0)+aa*Nu;
-    
+
     % Safety-Compensating Decentralized Adaptive Reciprocal Control
     uCost         = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
 
     % Priority / Nominal Control -- different for comm. v noncomm.
     if aa >= Na - (Nn - 1)
+        dcss = 0;
+        if dcss
+            uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
+    %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
+    
+            % Recompute safety w/ model of noncommunicating uCost
+            uSafety = u00;
+            uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
+            safety_settings.uNom  = uSafety;
+            [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+    
+            % Reassign no priority
+            priority = ones(Na,1);
+        else
+            uCost = [u00(2*ctrl_idx); 0];
+    
+            % Recompute safety w/ model of noncommunicating uCost
+            uSafety = u00;
+            uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
+            safety_settings.uNom  = uSafety;
+            [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+    
+            % Reassign no priority
+            priority = ones(Na,1);
+        end
         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
 %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
 
