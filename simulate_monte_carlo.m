@@ -55,8 +55,8 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 1000;
-nNon           = 1;
+nTrials        = 25;
+nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -104,7 +104,7 @@ beep
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/low_deviation/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 % filename = strcat('datastore/',dyn_mode,'/monte_carlo/nominal_cbf/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_testing.mat');
 
-filename = strcat('datastore/adaptive_decentralized_reciprocal_follower/',dyn_mode,'/ff_cbf/no_input_constraints/high_effort/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
+filename = strcat('datastore/adaptive_decentralized_reciprocal_follower/',dyn_mode,'/ff_cbf/input_constraints/high_energy/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'.mat');
 save(filename)
 
 %% Analyze Throughput Results

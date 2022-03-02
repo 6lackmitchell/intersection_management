@@ -411,7 +411,7 @@ for aa = 1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = 10.0;
+        l0   = 3.0;
         l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)
@@ -420,20 +420,21 @@ for aa = 1:Na
         Lfh0 = 2*(dx*dvx + dy*dvy);
         Lfh  = Lfh0 + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
-       
-        if settings.flip
+
+
+%         if settings.flip
             % Standard CBF (Rel-Deg 2)
             H   = h0;
             LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
             LgH = 2*(dx*dax_con + dy*day_con);
-        else
-            % FF-CBF
-%             l0 = max([2*h0,(-Lfh-abs(Lgh(idx_aa)*9.81) - abs(Lgh(idx_ii)*9.81))/max([h,0.001])]);
-            l0  = 2*h0;
-            H   = h;
-            LfH = Lfh;
-            LgH = Lgh;
-        end
+%         else
+%             % FF-CBF
+% %             l0 = max([2*h0,(-Lfh-abs(Lgh(idx_aa)*9.81) - abs(Lgh(idx_ii)*9.81))/max([h,0.001])]);
+%             l0  = 2*h0;
+%             H   = h;
+%             LfH = Lfh;
+%             LgH = Lgh;
+%         end
 
 %         % Robust-Virtual CBF
 %         hm = max([h,0]);
@@ -449,9 +450,9 @@ for aa = 1:Na
 %         LgH   = a1*Lgh + a2*Lfh0;
 
 %         % Robust-Virtual CBF
-%         ah0   = 0.01;
-%         H     = h   + ah0*h0;
-%         LfH   = Lfh;% + ah0*l1*Lfh0;
+%         kh0   = 3;
+%         H     = h   + 0.1*h0^(1/kh0);
+%         LfH   = Lfh + 0.1*1/kh0*h0^(1/kh0-1)*Lfh0;
 %         LgH   = Lgh;
     
         % Inequalities: Ax <= b

@@ -162,12 +162,12 @@ gg = 1;
 for g1 = 1:Na
     for g2 = g1+1:Na
         % Relatively high priority gets relatively low responsibility
-        if priority(g1) > priority(g2)
-            gamma0(gg) = 0;%flip;
-        else
-            gamma0(gg) = 1;%1-flip;
-        end
-%         gamma0(gg) = 1 - sqrt(priority(g1) / (priority(g1) + priority(g2)));
+%         if priority(g1) > priority(g2)
+%             gamma0(gg) = 0;%flip;
+%         else
+%             gamma0(gg) = 1;%1-flip;
+%         end
+        gamma0(gg) = 1 - sqrt(priority(g1) / (priority(g1) + priority(g2)));
         gg = gg + 1;
     end
 end
@@ -219,9 +219,22 @@ for aa = 1:Na
         q = [repmat(params.qu(2),Na,1); d*ones(Ns+Ng,1)];
         LB    = [-repmat(umax(2),Na,1); zeros(Ns,1); -10*ones(Ng,1)];
         UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1); 10*ones(Ng,1)];
-        LB    = [-100*ones(Na,1);  zeros(Ns,1); -inf*ones(Ng,1)];
-        UB    = [ 100*ones(Na,1); 1*ones(Ns,1); inf*ones(Ng,1)];
+%         LB    = [-100*ones(Na,1);  zeros(Ns,1); -inf*ones(Ng,1)];
+%         UB    = [ 100*ones(Na,1); 1*ones(Ns,1); inf*ones(Ng,1)];
 
+    end
+
+    % Check for safety violations
+    ia_virt_cbf = safety_params.h(end-2*(factorial(Na-1)-1):end);
+    ia_phys_cbf = safety_params.h0(end-2*(factorial(Na-1)-1):end);
+
+    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+    if phys_violations(aa) > 0
+        disp('Physical Barrier Violated')
+        vio_magnitude = min(ia_phys_cbf);
+        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
+        return
     end
 
     cost_settings = struct('Nu',    Na*(Nu-1) + Ns + Ng, ...
@@ -239,7 +252,9 @@ for aa = 1:Na
     catch ME
         disp(t)
         disp(ME.message)
-        rethrow(ME)
+        data = struct('code',12);
+        return
+%         rethrow(ME)
     end
 
     if exitflag ~= 2
@@ -249,18 +264,6 @@ for aa = 1:Na
         disp('Error');
         data = struct('code',exitflag);
         return 
-    end
-
-    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
-    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
-
-    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
-    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
-    if phys_violations(aa) > 0
-        disp('Physical Barrier Violated')
-        vio_magnitude = min(ia_phys_cbf);
-        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
-        return
     end
            
     u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
