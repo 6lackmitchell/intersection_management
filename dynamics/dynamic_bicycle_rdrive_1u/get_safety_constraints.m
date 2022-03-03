@@ -287,11 +287,16 @@ Lfhf    = 0;
 Lghf    = [-1];
 
 kr      = kf;
-% hr      = 100; % Reverse allowed
-hr      = xx(4); % Reverse not allowed
 Lfhr    = 0;
-% Lghr    = [0]; % Reverse allowed
-Lghr    = [1]; % Reverse not allowed
+if settings.backup
+    % Reverse allowed
+    hr      = 100;
+    Lghr    = [0];
+else
+    % Reverse not allowed
+    hr      = xx(4);
+    Lghr    = [1];
+end
 
 A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);

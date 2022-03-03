@@ -89,6 +89,7 @@ safety_settings = struct('Na',        Na,              ...
                          'lookahead', lookahead,       ...
                          'pcca',      settings.pcca,   ...
                          'classk',    settings.classk, ...
+                         'backup',    settings.backup, ...
                          'cbf_type',  settings.cbf_type);
 % Safety Constraints -- Same for comm. and noncomm.
 [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
@@ -182,9 +183,7 @@ for aa = 1:Na
         rethrow(ME)
     end
 
-    if 0%exitflag == 3 && max(safety_params.h0) > 0
-        sol = [-umax(2)*ones(4,1); zeros(6,1)];
-    elseif exitflag ~= 2
+    if exitflag ~= 2
         disp(t);
         disp(exitflag);
         disp(aa)
