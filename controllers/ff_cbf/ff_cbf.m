@@ -163,10 +163,13 @@ for aa = 1:Na
                            'idx',   ctrl_idx, ...
                            'k',     priority);
     [Q,p] = priority_cost(uCost,cost_settings);
-    LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
-    UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
-%     LB    = [-100*ones(Na,1);  zeros(Ns,1)];
-%     UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
+    if settings.ubounds
+        LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
+        UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
+    else
+        LB    = [-1e3*ones(Na,1);  zeros(Ns,1)];
+        UB    = [ 1e3*ones(Na,1); 1*ones(Ns,1)];
+    end
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
