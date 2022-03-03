@@ -1,4 +1,4 @@
-function [A,b,params] = get_safety_constraints(t,x,settings)
+function [A,b,params] = get_decentralized_safety_constraints(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 
 % Unpack PCCA Settings
@@ -287,16 +287,11 @@ Lfhf    = 0;
 Lghf    = [-1];
 
 kr      = kf;
+% hr      = 100; % Reverse allowed
+hr      = xx(4); % Reverse not allowed
 Lfhr    = 0;
-if settings.backup
-    % Reverse allowed
-    hr      = 100;
-    Lghr    = [0];
-else
-    % Reverse not allowed
-    hr      = xx(4);
-    Lghr    = [1];
-end
+% Lghr    = [0]; % Reverse allowed
+Lghr    = [1]; % Reverse not allowed
 
 A        = zeros(2,Nu*Na+Ns);
 b        = zeros(2,1);
@@ -375,9 +370,7 @@ for aa = settings.AAA%1:Na
         dvy = vay - viy;
         
         % Solve for minimizer of h
-        % was using kh = 100, but that led to safety violations
-%         kh       = 1.0; % This does not lead to safety violations
-        kh       = 1000.0; % This does not lead to safety violations
+        kh       = 100.0;
 %         tmax     = xa(4)/9.81; % Minimum stopping time %1.0;
         eps      = 1e-3;
         tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
@@ -417,7 +410,9 @@ for aa = settings.AAA%1:Na
         tau_dot_con      = tau_star_dot_con*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_con - Heavy_dot2_con);
 
         % Class K Function(s)
-        l0   = settings.classk;
+        l0   = 10.0;
+%         l0   = 1.0;
+%         l0   = 20.0;
         l1   = sqrt(6*l0);
         
         % h and hdot (= Lfh + Lgh*u)
@@ -427,35 +422,43 @@ for aa = settings.AAA%1:Na
         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
        
-        if strcmp(settings.cbf_type,'nominal_cbf')
-            % Nominal CBF (Rel-Deg 2)
-            H   = h0;
-            LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
-            LgH = 2*(dx*dax_con + dy*day_con);
-
-        elseif strcmp(settings.cbf_type,'ff_cbf')
-            % Future Focused CBF
-            l0  = h0;
-            H   = h;
-            LfH = Lfh;
-            LgH = Lgh;
-
-        elseif strcmp(settings.cbf_type,'rv_cbf')
-            % Robust-Virtual CBF
-            a1    = 0.1;
-            kh0   = 1;
-            H     = h   + a1*max([tau-1,eps])*h0^(1/kh0);
-            LfH   = Lfh + a1*(max([tau-1,eps])*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
-            LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
-        end
+        % Standard CBF (Rel-Deg 2)
+        H   = h0;
+        LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+        LgH = 2*(dx*dax_con + dy*day_con);
 
         % PCCA Contribution
-        if settings.pcca
-            LfH = LfH + Lgh*wHat(AAA,1:4)';
-        end
+        LfH = LfH + Lgh*wHat(AAA,1:4)';
+
+%         % FF-CBF
+%         l0  = h0;
+%         H   = h;
+%         LfH = Lfh;
+%         LgH = Lgh;
+
+%         % Robust-Virtual CBF
+%         hm = max([h,0]);
+%         a1 = (1-exp(-l0*hm)); % This formulation does not work because hh
+%         and h0 may have conflicting control directions, which would lead
+%         to zero control action when in fact one would need to either
+%         brake or accelerate
+%         a2 = exp(-l0*hm);
+%         Lfh0 = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+%         Lgh0 = 2*(dx*dax_con + dy*day_con);
+%         H     = a1*h   + a2*h0;
+%         LfH   = a1*Lfh + a2*Lfh0;
+%         LgH   = a1*Lgh + a2*Lfh0;
+
+%         % Robust-Virtual CBF
+%         a1    = 1;
+%         a2    = 0.01;
+%         H     = a1*h   + a2*h0;
+%         LfH   = a1*Lfh + a2*Lfh0;
+%         LgH   = a1*Lgh;
     
         % Inequalities: Ax <= b
         Aw(dd,1:Na*Nu)  = -LgH;
+%         Aw(dd,Na*Nu+ss) = -(0*l0)*(h0 - max(h,0));
         bw(dd)          = LfH + l0*H; 
         hw(dd)          = H;
         hw0(dd)         = h0;

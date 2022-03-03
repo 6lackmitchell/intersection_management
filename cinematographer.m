@@ -13,7 +13,7 @@ maxYdim = 25;
 % Plotting params
 theta = 0:2*pi/101:2*pi;
 RR    = 0.6;
-RR    = 1.8; % This corresponds to a physical radius of 1 = RR/2
+RR    = 2.0; % This corresponds to a physical radius of 1 = RR/2
 
 % Physical Params
 L = 0.85;

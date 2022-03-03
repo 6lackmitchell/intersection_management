@@ -9,6 +9,7 @@ clf;
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
 data = trial_data(3);
+data = trial_data(972); % Deadlock for nominal case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -21,7 +22,7 @@ violations = data.vios;
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
 
-filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
+% filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
 % for jj = 1:nAgents
 %     v_vios = sum(violations(:,jj,1))

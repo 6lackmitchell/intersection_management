@@ -2,7 +2,7 @@
 clear; clc;
 
 % Load relevant parameters
-run('initial_conditions_cpca.m');
+run('initial_conditions.m');
 
 % Tracking Control Params
 Tc = 0.25;
@@ -14,6 +14,7 @@ R = 2.0;
 % q = ones(Nu+Ns,1);
 q = [100 / umax(1)^2; 1 / umax(2)^2]; % This works well at tmax=3
 qu = [1e0 / umax(1)^2; 1e-4 / umax(2)^2]; % This works well in general
+qu = [1e0 / umax(1)^2; 1e-0 / umax(2)^2]; % This works well in general
 qg = [1];
 
 % FxTS Parameters

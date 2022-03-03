@@ -17,14 +17,17 @@
 clc; clear; close all; restoredefaultpath;
 
 % Dynamics and Controller modes
-mode           = "Centralized Priority-Cost Allocation";
-% dyn_mode       = "dynamic_bicycle_rdrive";
+campaign       = "testing";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
-% dyn_mode       = "double_integrator";
-% con_mode       = "lqr_cbf";
 con_mode       = "ff_cbf";
+cbf_type       = "nominal_cbf";
+pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
+backup         = false;
+pcca           = false;
+input_bounds   = false;
+class_k_l0     = 10.0;
 
 % Add Desired Paths
 % addpath '/Library/gurobi912/mac64/matlab'; % For mac
@@ -74,13 +77,18 @@ controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
 tic
-parfor nn = 1:nTrials
-% for nn = 1:nTrials
+% parfor nn = 1:nTrials
+for nn = 1:nTrials
 
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
     t_params    = struct('nTimesteps',nTimesteps,'ti',ti,'tf',tf,'dt',dt);
-    settings    = struct('x0',x0,'x0i',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,'SL',SL,'nNon',nNon);
+    settings    = struct('x0',x0,'x0i',x0_new,'Tpath',{Tpath_new},'nAgents',nAgents,...
+                         'nStates',nStates,'nControls',nControls,'xGoal',{xGoal},...
+                         'Rpath',{Rpath},'path',{path},'im_used',im_used,'Lr',Lr,...
+                         'SL',SL,'nNon',nNon,'pcca',pcca,'pmetric',pmetric,...
+                         'cbf_type',cbf_type,'class_k_l0',class_k_l0,'input_bounds',input_bounds,...
+                         'backup',backup);
     trial_setup = struct('dynamics',   dynamics,   ...
                          'controller', controller, ...
                          'u_params',   u_params,   ...
@@ -99,7 +107,9 @@ toc
 beep
 
 %% Save Simulation Results
-filename = strcat('datastore/robust_virtual/',dyn_mode,'/no_backup/input_constraints/nominal_cbf/',con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_a1.mat');
+file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
+file_description = get_file_description(file_settings);
+filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_K',num2str(class_k_l0),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -151,8 +161,8 @@ fraction_deadlock   = sum(dlock) / nTrials
 
 % fraction_virt_vio   = sum(vvios) / nTrials
 fraction_phys_vio   = sum(pvios) / nTrials
-avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)))
-max_phys_vio        = max(abs(vio_mags(find(vio_mags < 0))))
+avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)));
+max_phy_vio         = max(abs(vio_mags(find(vio_mags < 0))))
 
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 
@@ -181,6 +191,12 @@ xGoal      = misc_params.xGoal;
 im_used    = misc_params.im_used;
 Lr         = misc_params.Lr;
 SL         = misc_params.SL;
+pcca       = misc_params.pcca;
+pmetric    = misc_params.pmetric;
+cbf_type   = misc_params.cbf_type;
+classk     = misc_params.class_k_l0;
+ubounds    = misc_params.input_bounds;
+backup     = misc_params.backup;
 
 x          = zeros(nTimesteps,nAgents,nStates);
 u          = zeros(nTimesteps,nAgents,nControls);
@@ -208,8 +224,6 @@ success   = zeros(nAgents,1);
 tol       = 0.25;
 
 ii = 1;
-nInfeas = 0;
-failure = 0;
 
 % for ii = 1:nTimesteps
 while ii <= nTimesteps
@@ -267,14 +281,7 @@ while ii <= nTimesteps
         Tfxt(aa) = Tpath{aa}(gidx(aa));
 
 %         % Adjust Tfxt according to priority
-%         if ii > 1
-%             [~,pIdx] = sort(priority(max(ii-1,1),1:(nAgents-nNon)),'descend');
-%             if ismember(aa,1:(nAgents-nNon))
-%                 if gidx(aa) == 1
-%                     Tfxt(aa) = Tfxt(aa) + (pIdx(aa) - 1);
-%                 end
-%             end
-%         end
+%         Tfxt(aa) = adjust_fxts_time(priority);
 
         settings = struct('T',    Tfxt(aa),             ...
                           't0',   t0(aa),               ...
@@ -287,19 +294,25 @@ while ii <= nTimesteps
 
     end
 
-    settings          = struct('dynamics', @dynamics,...
-                               'uLast',    uLast,    ...
-                               'tSlots',   tSlots ,  ...
-                               'wHat',     wHat,     ...
-                               'Tfxt',     Tfxt,     ...
-                               'r',        r,        ...
-                               'rdot',     rdot,     ...
-                               'r2dot',    r2dot,    ...
-                               'Lr',       Lr,       ...
-                               'SL',       SL,       ...
-                               't0',       t0,       ...
+    settings          = struct('dynamics', @dynamics, ...
+                               'uLast',    uLast,     ...
+                               'tSlots',   tSlots ,   ...
+                               'wHat',     wHat,      ...
+                               'Tfxt',     Tfxt,      ...
+                               'r',        r,         ...
+                               'rdot',     rdot,      ...
+                               'r2dot',    r2dot,     ...
+                               'Lr',       Lr,        ...
+                               'SL',       SL,        ...
+                               't0',       t0,        ...
                                'prior',    priority(max(ii-1,1),:), ...
-                               'Nn',       nNon, ...
+                               'pcca',     pcca,      ...
+                               'pmetric',  pmetric,   ...
+                               'cbf_type', cbf_type,  ...
+                               'classk',   classk,    ...
+                               'ubounds',  ubounds,   ...
+                               'backup',   backup,    ...
+                               'Nn',       nNon,      ...
                                'dt',       dt);
     try
         % Compute control input
@@ -350,6 +363,7 @@ while ii <= nTimesteps
         break
     end
 
+    % idx of vehicle outside 20m from intersection center
     outside_idx = find(sqrt(sum(squeeze(x(ii,:,1:2))'.^2)) > 20);
     if sum(success) == nAgents || any(success(outside_idx) == 0)
         break
@@ -435,5 +449,30 @@ Acondition  = dot(xg,xa) / (norm(xg)*norm(xa)) >  cos(deg2rad(60));
 X0condition = dot(xg,x0) / (norm(xg)*norm(x0)) < -cos(deg2rad(60));
 
 ret = Rcondition && Acondition && X0condition;
+
+end
+
+function [file_description] = get_file_description(txt_settings)
+campaign        = txt_settings.campaign;
+dyn_mode        = txt_settings.dyn_mode;
+cbf_txt         = txt_settings.cbf_txt;
+priority_metric = txt_settings.pmetric;
+
+input_txt = 'input_constraints';
+if ~txt_settings.input_bounds
+    input_txt = strcat('no_',input_txt);
+end
+
+backup_txt = 'backup';
+if ~txt_settings.backup
+    backup_txt = strcat('no_',backup_txt);
+end
+
+pcca_txt = 'pcca';
+if ~txt_settings.pcca
+    pcca_txt = strcat('no_',pcca_txt);
+end
+
+file_description = strcat('datastore/',campaign,'/',dyn_mode,'/d_css/',backup_txt,'/',input_txt,'/',pcca_txt,'/',cbf_txt,'/',priority_metric,'/');
 
 end

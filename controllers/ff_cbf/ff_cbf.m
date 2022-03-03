@@ -42,6 +42,7 @@ uLast    = settings.uLast;
 prior    = settings.prior;
 Nu       = params.Nu;
 umax     = params.umax;
+wHat     = settings.wHat;
 
 % Organize parameters
 Na  = size(x,1);       % Number of agents
@@ -62,17 +63,17 @@ phys_violations = zeros(Na,1);
 % tSlots
 tSlots = settings.tSlots;
 
-% % Generate Nominal Control Inputs
-% for aa = 1:Na
-%     % Loop Variables
-%     ctrl_idx = (-1:0)+aa*Nu;
-%             
-%     % Generate nominal control input from trajectory tracking controller
-%     u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
-%     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
-%     u00(ctrl_idx) = u0;
-% 
-% end
+% Check for safety violations
+ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
+ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
+virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+if phys_violations(aa) > 0
+    disp('Physical Barrier Violated')
+    vio_magnitude = min(ia_phys_cbf);
+    data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
+    return
+end
 
 % Compute values for priority metrics
 power    = 2;
@@ -96,36 +97,37 @@ for aa = 1:Na
 
     % Generate "Energy"-based Priority Metric
     lookahead       = 1.0;
-    safety_settings = struct('Na',        Na,          ...
-                             'Nn',        Nn,          ...
-                             'Ns',        Ns,          ...
-                             'SL',        settings.SL, ...
-                             'AAA',       aa,          ...
-                             'vEst',      uLast,       ...
+    safety_settings = struct('Na',        Na,              ...
+                             'Nn',        Nn,              ...
+                             'Ns',        Ns,              ...
+                             'SL',        settings.SL,     ...
+                             'AAA',       aa,              ...
+                             'vEst',      uLast,           ...
                              'uNom',      uSafety,         ...
-                             'tSlots',    tSlots,      ...
-                             'lookahead', lookahead);
+                             'tSlots',    tSlots,          ...
+                             'lookahead', lookahead,       ...
+                             'pcca',      settings.pcca,   ...
+                             'classk',    settings.classk, ...
+                             'backup',    settings.backup, ...
+                             'cbf_type',  settings.cbf_type);
     % Safety Constraints -- Same for comm. and noncomm.
-    [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+    [As,bs,safety_params] = get_decentralized_safety_constraints(t,x,safety_settings);
 
-    % Compute priority
     h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
     Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
-    metric = 'None';
-%     metric = 'FCFS';
-%     metric = 'HighEffort';
-    metric_settings = struct('metric',  metric,        ...
-                             'power',   power,         ...
-                             'xdot',    [xdot ydot],   ...
-                             'xdes',    settings.r,    ...
-                             'xdesdot', settings.rdot, ...
-                             'h',       h_metric,      ...
-                             'Lgh',     Lgh,           ...
-                             'prior',   prior,         ...
-                             'Na',      Na,            ...
+    
+    % Compute priority
+    metric_settings = struct('metric',  settings.pmetric, ...
+                             'power',   power,            ...
+                             'xdot',    [xdot ydot],      ...
+                             'xdes',    settings.r,       ...
+                             'xdesdot', settings.rdot,    ...
+                             'h',       h_metric,         ...
+                             'Lgh',     Lgh,              ...
+                             'prior',   prior,            ...
+                             'Na',      Na,               ...
                              'dt',      settings.dt);
     priority = get_priority_metric(t,x,metric_settings);
-    % priority = ones(Na,1);
     prior    = priority;
 
     d = 1; % Param for relaxation of speed limit
@@ -136,10 +138,13 @@ for aa = 1:Na
                            'idx',   ctrl_idx, ...
                            'k',     priority);
     [Q,p] = priority_cost(uCost,cost_settings);
-    LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
-    UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
-%     LB    = [-100*ones(Na,1);  zeros(Ns,1)];
-%     UB    = [ 100*ones(Na,1); 1*ones(Ns,1)];
+    if settings.ubounds
+        LB    = [-repmat(umax(2),Na,1); zeros(Ns,1)];
+        UB    = [ repmat(umax(2),Na,1); 1*ones(Ns,1)];
+    else
+        LB    = [-1e3*ones(Na,1);  zeros(Ns,1)];
+        UB    = [ 1e3*ones(Na,1); 1*ones(Ns,1)];
+    end
 
     % Solve Optimization problem
     % 1/2*x^T*Q*x + p*x subject to Ax <= b
@@ -152,9 +157,7 @@ for aa = 1:Na
         rethrow(ME)
     end
 
-    if 0%exitflag == 3 && max(safety_params.h0) > 0
-        sol = [-umax(2)*ones(4,1); zeros(6,1)];
-    elseif exitflag ~= 2
+    if exitflag ~= 2
         disp(t);
         disp(exitflag);
         disp(aa)
@@ -162,29 +165,18 @@ for aa = 1:Na
         data = struct('code',exitflag);
         return 
     end
-
-    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
-    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
-
-    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
-    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
-    if phys_violations(aa) > 0
-        disp('Physical Barrier Violated')
-        vio_magnitude = min(ia_phys_cbf);
-        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
-        return
-    end
            
     u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u00((-1:0)+aa*Nu);
     mincbf(aa)  = min([safety_params.h; 100]);
-    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',Na*Nu+Ns,1);
+    sols_inter  = [u00(1:2:Na*Nu)'; sol(1:Na)'];
+    sols(aa,:)  = [sols_inter(:); sol(Na+1:end)];
 
 end
 
 % Determine new values for wHat: wHat_ij = u_jj - u_ij
-wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols(1:Na*Nu);
+wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols(:,1:Na*Nu);
 
 % Configure relevant variables for logging
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);

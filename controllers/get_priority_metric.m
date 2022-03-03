@@ -21,7 +21,7 @@ function [priority] = get_priority_metric(t,x,settings)
 % Jan 2022; Last revision: 31-Jan-2022
 %------------- BEGIN CODE --------------% Load control params
 switch settings.metric
-    case 'None'
+    case 'no_priority'
         % No priority -- all equal
         settings.power = settings.Na;
         idxLF = 1:1:settings.Na;
@@ -83,8 +83,8 @@ end
 
 priority = zeros(settings.Na,1);
 for aa = 1:settings.Na
-    priority(idxLF(aa)) = settings.power^(aa-1);
-%     priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
+%     priority(idxLF(aa)) = settings.power^(aa-1);
+    priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
 end
 
 
