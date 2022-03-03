@@ -42,6 +42,7 @@ uLast    = settings.uLast;
 prior    = settings.prior;
 Nu       = params.Nu;
 umax     = params.umax;
+wHat     = settings.wHat;
 
 % Organize parameters
 Na  = size(x,1);       % Number of agents
@@ -82,6 +83,7 @@ safety_settings = struct('Na',        Na,          ...
                          'SL',        settings.SL, ...
                          'AAA',       aa,          ...
                          'vEst',      uLast,       ...
+                         'wHat',      wHat,        ...
                          'uNom',      u00,         ...
                          'tSlots',    tSlots,      ...
                          'lookahead', lookahead);
@@ -138,31 +140,7 @@ for aa = 1:Na
 
     % Priority / Nominal Control -- different for comm. v noncomm.
     if aa >= Na - (Nn - 1)
-        dcss = 0;
-        if dcss
-            uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
-    %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
-    
-            % Recompute safety w/ model of noncommunicating uCost
-            uSafety = u00;
-            uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
-            safety_settings.uNom  = uSafety;
-            [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
-    
-            % Reassign no priority
-            priority = ones(Na,1);
-        else
-            uCost = [u00(2*ctrl_idx); 0];
-    
-            % Recompute safety w/ model of noncommunicating uCost
-            uSafety = u00;
-            uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
-            safety_settings.uNom  = uSafety;
-            [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
-    
-            % Reassign no priority
-            priority = ones(Na,1);
-        end
+
         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = 0; % Estimate control to be zero
 %         uCost(~ismember(find(uCost>-Inf),ctrl_idx)) = uLast(1:3,2); % Estimate control to be last input
 
@@ -170,10 +148,16 @@ for aa = 1:Na
         uSafety = u00;
         uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
         safety_settings.uNom  = uSafety;
-        [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+
+        % DCSS vs Decent.
+%         [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings); % D-CSS
+        [As,bs,safety_params] = get_decentralized_safety_constraints(t,x,safety_settings); % Decentralized
 
         % Reassign no priority
         priority = ones(Na,1);
+    else
+        uCost(4) = 0;
+   
     end
 
     d = 1; % Param for relaxation of speed limit
@@ -215,12 +199,13 @@ for aa = 1:Na
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u00((-1:0)+aa*Nu);
     mincbf(aa)  = min([safety_params.h; 100]);
-    sols(aa,:)  = reshape([u00(1:2:Na*Nu); sol]',Na*Nu+Ns,1);
+    sols_inter  = [u00(1:2:Na*Nu)'; sol(1:Na)'];
+    sols(aa,:)  = [sols_inter(:); sol(Na+1:end)];
 
 end
 
 % Determine new values for wHat: wHat_ij = u_jj - u_ij
-wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols(1:Na*Nu);
+wHat = repmat(reshape(u',1,Na*Nu),Na,1) - sols(:,1:Na*Nu);
 
 % Configure relevant variables for logging
 u     = permute(reshape(u,[1 Na Nu]),[1 2 3]);

@@ -314,6 +314,8 @@ Na    = settings.Na;
 Ns    = settings.Ns;
 tmax  = settings.lookahead;
 uNom  = settings.uNom;
+AAA   = settings.AAA;
+wHat  = settings.wHat;
 
 Lr = 1;
 sw = 1.0;
@@ -424,6 +426,9 @@ for aa = settings.AAA%1:Na
         H   = h0;
         LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
         LgH = 2*(dx*dax_con + dy*day_con);
+
+        % PCCA Contribution
+        LfH = LfH + Lgh*wHat(AAA,1:4)';
 
 %         % FF-CBF
 %         l0  = h0;
