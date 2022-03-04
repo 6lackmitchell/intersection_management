@@ -340,9 +340,7 @@ ss  = 1;
 % Loop through every scheduled agent for PCCA
 for aa = 1:Na
     
-%     Aw = []; bw = []; hw = [];
-    nc  = Na-aa; % THIS NEEDS TO BE UNCOMMENTED
-%     nc  = Na;
+    nc  = Na-aa;
     Aw  = zeros(nc,Nu*Na+Ns);
     bw  = zeros(nc,1);
     hw  = zeros(nc,1);
@@ -391,9 +389,9 @@ for aa = 1:Na
         aya_con = zeros(1,Na*Nu);
         ayi_con = zeros(1,Na*Nu);
         axa_con(idx_aa) = cos(xa(3))-sin(xa(3))*tan(xa(5));
-%         axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5)); % THIS NEEDS TO BE UNCOMMENTED
+        axi_con(idx_ii) = cos(xi(3))-sin(xi(3))*tan(xi(5)); % THIS NEEDS TO BE UNCOMMENTED
         aya_con(idx_aa) = sin(xa(3))+cos(xa(3))*tan(xa(5));
-%         ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5));  % THIS NEEDS TO BE UNCOMMENTED
+        ayi_con(idx_ii) = sin(xi(3))+cos(xi(3))*tan(xi(5));  % THIS NEEDS TO BE UNCOMMENTED
         
         % dax and day
         dax_unc = axa_unc - axi_unc;

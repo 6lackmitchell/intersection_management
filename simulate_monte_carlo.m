@@ -60,7 +60,7 @@ u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
 nTrials        = 2;
-nNon           = 0;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -109,7 +109,7 @@ beep
 %% Save Simulation Results
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
-filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_K',num2str(class_k_l0),'.mat');
+filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
@@ -473,6 +473,6 @@ if ~txt_settings.pcca
     pcca_txt = strcat('no_',pcca_txt);
 end
 
-file_description = strcat('datastore/',campaign,'/',dyn_mode,'/d_css/',backup_txt,'/',input_txt,'/',pcca_txt,'/',cbf_txt,'/',priority_metric,'/');
+file_description = strcat('datastore/',campaign,'/',dyn_mode,'/decentralized/',backup_txt,'/',input_txt,'/',pcca_txt,'/',cbf_txt,'/',priority_metric,'/');
 
 end

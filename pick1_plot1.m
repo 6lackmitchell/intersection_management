@@ -8,8 +8,7 @@ clf;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(3);
-data = trial_data(972); % Deadlock for nominal case
+data = trial_data(2);
 code = data.code;
 t = data.t;
 dt = 0.01;
