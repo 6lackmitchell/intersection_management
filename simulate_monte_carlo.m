@@ -21,7 +21,7 @@ campaign       = "testing";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
 cbf_type       = "nominal_cbf";
-pmetric        = "fcfs";
+pmetric        = "high_energy";
 cost_mode      = "costs";
 im_used        = 0;
 backup         = false;
@@ -109,7 +109,7 @@ beep
 %% Save Simulation Results
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
-filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_K',num2str(class_k_l0),'.mat');
+filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
 save(filename)
 
 %% Analyze Throughput Results
