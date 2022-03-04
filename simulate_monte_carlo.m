@@ -25,7 +25,7 @@ pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
 backup         = false;
-pcca           = false;
+pcca           = true;
 input_bounds   = false;
 class_k_l0     = 10.0;
 
@@ -59,8 +59,8 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 2;
-nNon           = 1;
+nTrials        = 25;
+nNon           = 2;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
