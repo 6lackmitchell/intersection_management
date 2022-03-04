@@ -16,7 +16,7 @@
 % Framework Setup
 clc; clear; close all; restoredefaultpath;
 
-% Dynamics and Controller modes
+% Dynamics and Controller Settings
 campaign       = "testing";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
