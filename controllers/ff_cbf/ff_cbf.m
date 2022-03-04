@@ -93,7 +93,7 @@ for aa = 1:Na
         uCost(aa)         = u0(2);
     else
         uSafety = u00;
-        uCost   = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
+        uCost   = [u00(2:2:(Na-Nn)*Nu); zeros(Ns+Nn,1)]; % Zeros for h slack
     end
 
     % Define safety settings
