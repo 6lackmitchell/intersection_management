@@ -63,18 +63,6 @@ phys_violations = zeros(Na,1);
 % tSlots
 tSlots = settings.tSlots;
 
-% Check for safety violations
-ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
-ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
-virt_violations(aa) = sum(find(ia_virt_cbf < 0));
-phys_violations(aa) = sum(find(ia_phys_cbf < 0));
-if phys_violations(aa) > 0
-    disp('Physical Barrier Violated')
-    vio_magnitude = min(ia_phys_cbf);
-    data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
-    return
-end
-
 % Compute values for priority metrics
 power    = 2;
 xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
@@ -112,6 +100,18 @@ for aa = 1:Na
                              'cbf_type',  settings.cbf_type);
     % Safety Constraints -- Same for comm. and noncomm.
     [As,bs,safety_params] = get_decentralized_safety_constraints(t,x,safety_settings);
+
+    % Check for safety violations
+    ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
+    ia_phys_cbf = safety_params.h0(end-(factorial(Na-1)-1):end);
+    virt_violations(aa) = sum(find(ia_virt_cbf < 0));
+    phys_violations(aa) = sum(find(ia_phys_cbf < 0));
+    if phys_violations(aa) > 0
+        disp('Physical Barrier Violated')
+        vio_magnitude = min(ia_phys_cbf);
+        data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
+        return
+    end
 
     h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
     Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
