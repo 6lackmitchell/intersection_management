@@ -21,7 +21,7 @@ b  = zeros(nRows,1);
 h  = zeros(nRows,1);
 h0 = zeros(nRows,1);
 
-for aa = settings.AAA%1:Na
+for aa = 1:Na
     
     settings.('aa') = aa;
     
@@ -338,11 +338,11 @@ cc  = 1;
 ss  = 1;
 
 % Loop through every scheduled agent for PCCA
-for aa = settings.AAA%1:Na
+for aa = 1:Na
     
 %     Aw = []; bw = []; hw = [];
-%     nc  = Na-aa; % THIS NEEDS TO BE UNCOMMENTED
-    nc  = Na;
+    nc  = Na-aa; % THIS NEEDS TO BE UNCOMMENTED
+%     nc  = Na;
     Aw  = zeros(nc,Nu*Na+Ns);
     bw  = zeros(nc,1);
     hw  = zeros(nc,1);
@@ -350,12 +350,8 @@ for aa = settings.AAA%1:Na
     dd  = 1;
     
     % Loop through all other agents for interagent completeness
-    for ii = 1:Na
-        if ii == aa
-            continue
-        end
-%     for ii = aa+1:Na
-        
+    for ii = aa+1:Na
+                
         xa = x(aa,:);
         xi = x(ii,:);
         

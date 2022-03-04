@@ -59,7 +59,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 1000;
+nTrials        = 2;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);

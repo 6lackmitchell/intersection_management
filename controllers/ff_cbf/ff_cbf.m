@@ -68,6 +68,7 @@ power    = 2;
 xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
 
+% Generate Nominal Control Inputs
 for aa = 1:Na
     % Loop Variables
     ctrl_idx = (-1:0)+aa*Nu;
@@ -76,15 +77,27 @@ for aa = 1:Na
     u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
-    
-    % Safety-Compensating Decentralized Adaptive Reciprocal Control
-    uSafety           = zeros(Na*Nu,1);
-    uSafety(ctrl_idx) = u0;
-    uCost             = zeros(Na+Ns,1);
-    uCost(aa)         = u0(2);
 
-    % Generate "Energy"-based Priority Metric
-    lookahead       = 1.0;
+end
+
+for aa = 1:Na
+    % Loop Variables
+    ctrl_idx = (-1:0)+aa*Nu;
+    decentralized = (aa > (Na-Nn));
+            
+    % Safety-Compensating Decentralized Adaptive Reciprocal Control
+    if decentralized
+        uSafety           = zeros(Na*Nu,1);
+        uSafety(ctrl_idx) = u0;
+        uCost             = zeros(Na+Ns,1);
+        uCost(aa)         = u0(2);
+    else
+        uSafety = u00;
+        uCost   = [u00(2:2:Na*Nu); zeros(Ns,1)]; % Zeros for h slack
+    end
+
+    % Define safety settings
+    lookahead       = 5.0;
     safety_settings = struct('Na',        Na,              ...
                              'Nn',        Nn,              ...
                              'Ns',        Ns,              ...
@@ -93,13 +106,19 @@ for aa = 1:Na
                              'vEst',      uLast,           ...
                              'uNom',      uSafety,         ...
                              'tSlots',    tSlots,          ...
+                             'wHat',      wHat,            ...
                              'lookahead', lookahead,       ...
                              'pcca',      settings.pcca,   ...
                              'classk',    settings.classk, ...
                              'backup',    settings.backup, ...
                              'cbf_type',  settings.cbf_type);
-    % Safety Constraints -- Same for comm. and noncomm.
-    [As,bs,safety_params] = get_decentralized_safety_constraints(t,x,safety_settings);
+    
+    % Generate safety constraints
+    if decentralized
+        [As,bs,safety_params] = get_decentralized_safety_constraints(t,x,safety_settings);
+    else
+        [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
+    end
 
     % Check for safety violations
     ia_virt_cbf = safety_params.h(end-(factorial(Na-1)-1):end);
@@ -166,7 +185,7 @@ for aa = 1:Na
         return 
     end
            
-    u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];
+    u(aa,:)     = [u00(Nu*aa-1) sol(aa)];
     uLast(aa,:) = u(aa,:);
     uNom(aa,:)  = u00((-1:0)+aa*Nu);
     mincbf(aa)  = min([safety_params.h; 100]);
