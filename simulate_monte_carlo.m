@@ -26,8 +26,8 @@ cost_mode      = "costs";
 im_used        = 0;
 backup         = false;
 pcca           = false;
-input_bounds   = false;
-class_k_l0     = 10.0;
+input_bounds   = true;
+class_k_l0     = 1.0;
 
 % Add Desired Paths
 % addpath '/Library/gurobi912/mac64/matlab'; % For mac
@@ -59,8 +59,8 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 2;
-nNon           = 1;
+nTrials        = 1000;
+nNon           = 4;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -77,8 +77,8 @@ controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
 tic
-% parfor nn = 1:nTrials
-for nn = 1:nTrials
+parfor nn = 1:nTrials
+% for nn = 1:nTrials
 
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);

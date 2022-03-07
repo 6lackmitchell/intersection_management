@@ -1,3 +1,57 @@
+filename = 'C:\Users\DASC\Documents\git\intersection_management\datastore\testing\dynamic_bicycle_rdrive_1u\decentralized\no_backup\no_input_constraints\no_pcca\nominal_cbf\no_priority\ff_cbf_4MonteCarlo_N1000Nnon4_K10.mat';
+load(filename)
+
+TTI     = Inf*ones(nTrials*nAgents,1);
+vvios   = zeros(nTrials,1);
+pvios   = zeros(nTrials,1);
+infeas  = zeros(nTrials,1);
+dlock   = zeros(nTrials,1);
+endtime = zeros(nTrials,1);
+successes = zeros(nTrials,1);
+vio_mags  = zeros(nTrials,1);
+for nn = 1:nTrials
+    TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
+    infeas(nn)  = trial_data(nn).code == 0;
+    endtime(nn) = trial_data(nn).t;
+    dlock(nn)   = endtime(nn) == 20;
+    successes(nn) = trial_data(nn).success;
+    vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
+    pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
+    if pvios(nn) > 0
+        vio_mags(nn) = min(trial_data(nn).vmags);
+    end
+end
+
+success_rate  = sum(successes) / nTrials
+successes_idx = find(successes == 1);
+if isempty(successes_idx)
+    average_time = 0
+else
+    average_time  = sum([trial_data(successes_idx).t]) / sum(successes)
+end
+
+sortedTTI  = sort(TTI);
+finished   = sortedTTI(find(sortedTTI < 5.0));
+unfinished = sortedTTI(find(sortedTTI >= 5.0));
+
+fraction_finished   = length(finished) / (nAgents*nTrials);
+fraction_unfinished = 1 - fraction_finished;
+
+fraction_infeasible = sum(infeas) / nTrials;
+
+fraction_complete   = 1 - fraction_infeasible - sum(pvios) / nTrials;
+fraction_feasible   = 1 - fraction_infeasible
+fraction_deadlock   = sum(dlock) / nTrials
+
+% fraction_virt_vio   = sum(vvios) / nTrials
+fraction_phys_vio   = sum(pvios) / nTrials
+avg_phys_vio        = mean(vio_mags(find(vio_mags < 0)));
+max_phy_vio         = max(abs(vio_mags(find(vio_mags < 0))))
+
+mean_all            = mean(finished,'all');
+mean_endtime        = mean(endtime(find(infeas==1))); 
+
+%%
 find(infeas==1)
 find(pvios>0)
 find(successes==0)
@@ -8,7 +62,7 @@ clf;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(2);
+data = trial_data(901);
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -20,7 +74,6 @@ violations = data.vios;
 
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
-
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
 % for jj = 1:nAgents
