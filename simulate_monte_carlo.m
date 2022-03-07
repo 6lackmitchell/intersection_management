@@ -25,8 +25,8 @@ pmetric        = "high_energy";
 cost_mode      = "costs";
 im_used        = 0;
 backup         = false;
-pcca           = false;
-input_bounds   = false;
+pcca           = true;
+input_bounds   = true;
 class_k_l0     = 10.0;
 
 % Add Desired Paths
@@ -60,7 +60,7 @@ u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
 nTrials        = 1000;
-nNon           = 4;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
