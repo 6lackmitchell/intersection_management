@@ -27,7 +27,7 @@ im_used        = 0;
 backup         = false;
 pcca           = false;
 input_bounds   = true;
-class_k_l0     = 1.0;
+class_k_l0     = 10.0;
 
 % Add Desired Paths
 % addpath '/Library/gurobi912/mac64/matlab'; % For mac
@@ -60,7 +60,7 @@ u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
 nTrials        = 1000;
-nNon           = 4;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -77,8 +77,8 @@ controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
 tic
-parfor nn = 1:nTrials
-% for nn = 1:nTrials
+% parfor nn = 1:nTrials
+for nn = 1:nTrials
 
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
@@ -109,7 +109,7 @@ beep
 %% Save Simulation Results
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
-filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
+filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'Nnon',num2str(nNon),'_K',num2str(class_k_l0),'_NNbrake.mat');
 save(filename)
 
 %% Analyze Throughput Results

@@ -27,7 +27,7 @@ switch settings.metric
         idxLF = 1:1:settings.Na;
         LF    = ones(settings.Na,1);
 
-    case 'FCFS'
+    case 'fcfs'
         % First Come First Served
         if t > settings.dt
             % Static priority, nothing changes after first assignment
@@ -38,7 +38,7 @@ switch settings.metric
         LF = 1/2*vecnorm(x(:,1:2)').^2;
         [~,idxLF] = sort(LF,'descend');
 
-    case 'FCFS_V'
+    case 'fcfs_v'
         % First Come First Served
         if t > settings.dt
             % Static priority, nothing changes after first assignment
@@ -49,22 +49,22 @@ switch settings.metric
         LF = (1/2*vecnorm(x(:,1:2)').^2./vecnorm(settings.xdot'));
         [~,idxLF] = sort(LF,'descend');
 
-    case 'HighDev'
+    case 'high_dev'
         % High Deviation from Nominal Trajectory gets High Priority
         LF = 1/2*vecnorm(settings.xdes' - x(:,1:2)').^2 + 1/2*vecnorm(settings.xdesdot' - settings.xdot').^2;
         [~,idxLF] = sort(LF,'ascend');
 
-    case 'LowDev'
+    case 'low_dev'
         % Low Deviation from Nominal Trajectory gets High Priority
         LF = 1/2*vecnorm(settings.xdes' - x(:,1:2)').^2 + 1/2*vecnorm(settings.xdesdot' - settings.xdot').^2;
         [~,idxLF] = sort(LF,'descend');
 
-    case 'HighEffort'
+    case 'high_energy'
         % High Required Effort for safe control gets High Priority
         LF = 1/2*sum(settings.Lgh.^2);
         [~,idxLF] = sort(LF,'ascend');
 
-    case 'LowEffort'
+    case 'low_energy'
         % Low Required Effort for safe control gets High Priority
         LF = 1/2*sum(settings.Lgh.^2);
         [~,idxLF] = sort(LF,'descend');

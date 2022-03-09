@@ -176,7 +176,14 @@ for aa = 1:Na
         rethrow(ME)
     end
 
-    if exitflag ~= 2
+    if exitflag ~= 2 && decentralized
+        sol = zeros(Na+Ns,1);
+        if x(aa,4) > 0
+            sol(aa) = -9.81;
+        else
+            sol(aa) = 0;
+        end
+    elseif exitflag ~= 2
         disp(t);
         disp(exitflag);
         disp(aa)
