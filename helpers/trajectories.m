@@ -53,17 +53,19 @@ if strcmp(path,'linear')
     end
     
     tau = min(1,max([tau,tau_est1,tau_est2]));
+%     tau = min(1,max([tau_est1,tau_est2]));
     r  = xF * tau + xS * (1 - tau);
         
+    rddot = [0 0];
     if tau < 1
         rdot = (xF - xS) / T;
     elseif norm(r - x(1:2)) > epsilon
-        rdot = (r - x(1:2)) / 0.01;
+        rdot = (r - x(1:2)) / 0.75;
     else
         rdot = [0 0];
     end
     
-    rddot = [0 0];
+    
     
 elseif contains(path,'circular')
     
@@ -71,6 +73,7 @@ elseif contains(path,'circular')
         x0   = xS(1:2) + [-R*sin(th0) R*cos(th0)];
         phi0 = th0 - (pi / 2);
         phif = th0;
+
     elseif contains(path,'right')
         x0 = xS(1:2) + [R*sin(th0) -R*cos(th0)];
         phi0 = th0 + (pi / 2);
@@ -84,10 +87,12 @@ elseif contains(path,'circular')
     if phif - phi0 == 0
         tau_est = 0;
     else
+%         tau_est = (atan2(x(2)-xS(2),x(1)-xS(1)) - phi0) / (phif - phi0);
         tau_est = (atan2(x(2),x(1)) - phi0) / (phif - phi0);
     end
     
     tau    = min(1,max(tau,tau_est));
+%     tau    = min(1,tau_est);
     
     
     th     = phif * tau + phi0 * (1 - tau);

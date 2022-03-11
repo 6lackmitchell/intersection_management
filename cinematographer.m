@@ -147,6 +147,7 @@ for tt=1:(1/(50*dt)):maxsteps
 
         plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
         plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+        quiver(cx1,cy1,(1+x(tt,ii,4))*cos(x(tt,ii,3)+x(tt,ii,5)),(1+x(tt,ii,4))*sin(x(tt,ii,3)+x(tt,ii,5)))
 
     %     plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
 

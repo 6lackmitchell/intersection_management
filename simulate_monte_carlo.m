@@ -17,15 +17,15 @@
 clc; clear; close all; restoredefaultpath;
 
 % Dynamics and Controller modes
-campaign       = "testing";
+campaign       = "intersection_crossing_turning";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
-cbf_type       = "nominal_cbf";
-pmetric        = "high_energy";
+cbf_type       = "ff_cbf";
+pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
 backup         = false;
-pcca           = true;
+pcca           = false;
 input_bounds   = true;
 class_k_l0     = 10.0;
 
@@ -59,8 +59,8 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 1000;
-nNon           = 1;
+nTrials        = 5;
+nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -76,6 +76,13 @@ dynamics   = str2func(dyn_mode);
 controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
+success_rate = 0;
+fraction_feasible = 0;
+fraction_phys_vio = 1;
+
+% while fraction_feasible < 1 || fraction_phys_vio > 0
+% while success_rate < 1
+% while success_rate < 1
 tic
 parfor nn = 1:nTrials
 % for nn = 1:nTrials
@@ -96,6 +103,9 @@ parfor nn = 1:nTrials
                          'settings',   settings);
 
     trial_data(nn) = run_one_trial(trial_setup);
+%     if trial_data(nn).code ~= 1
+%         break;
+%     end
 
     % Simulation Progress
     if mod(nn,nTrials/10) == 0
@@ -106,16 +116,16 @@ end
 toc
 beep
 
-%% Save Simulation Results
+% Save Simulation Results
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
 filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
 save(filename)
 
-%% Analyze Throughput Results
+% Analyze Throughput Results
 % 01.13.2022
-% to_load  = 'datastore/double_integrator/monte_carlo/normal_cbf/high_effort/ff_cbf_4MonteCarlo_N1000_testing'
-% load(filename);
+% to_load  = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat';
+% load(to_load);
 
 TTI     = Inf*ones(nTrials*nAgents,1);
 vvios   = zeros(nTrials,1);
@@ -129,7 +139,7 @@ for nn = 1:nTrials
     TTI((nn-1)*nAgents+1:(nn-1)*nAgents+nAgents) = trial_data(nn).TTI;
     infeas(nn)  = trial_data(nn).code == 0;
     endtime(nn) = trial_data(nn).t;
-    dlock(nn)   = endtime(nn) == 20;
+    dlock(nn)   = endtime(nn) == 20 || trial_data(nn).code == -2;
     successes(nn) = trial_data(nn).success;
     vvios(nn)   = sum(trial_data(nn).vios(:,:,1),'all') > 0;
     pvios(nn)   = sum(trial_data(nn).vios(:,:,2),'all') > 0;
@@ -166,6 +176,9 @@ max_phy_vio         = max(abs(vio_mags(find(vio_mags < 0))))
 
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 
+
+% end
+
 
 %% Miscellaneous Helper Functions
 function trial_data = run_one_trial(trial_setup)
@@ -222,6 +235,10 @@ wHat      = zeros(nAgents,nAgents*nControls);
 thru_time = Inf*ones(nAgents,1);
 success   = zeros(nAgents,1);
 tol       = 0.25;
+vzero     = zeros(nAgents,1);
+pxzero    = zeros(nAgents,1);
+pyzero    = zeros(nAgents,1);
+phid      = x0(:,3);
 
 ii = 1;
 
@@ -313,7 +330,11 @@ while ii <= nTimesteps
                                'ubounds',  ubounds,   ...
                                'backup',   backup,    ...
                                'Nn',       nNon,      ...
-                               'dt',       dt);
+                               'dt',       dt,        ...
+                               'v0',       vzero,     ...
+                               'px0',      pxzero,    ...
+                               'py0',      pyzero,    ...
+                               'phid',     phid);
     try
         % Compute control input
         data         = controller(t,xx,settings,u_params);
@@ -330,6 +351,17 @@ while ii <= nTimesteps
             wHat            = data.wHat;
             priority(ii,:)  = data.prior;
             violations(ii,:) = [data.v_vio; data.p_vio]';
+            sett            = data.settings;
+            vzero           = sett.v0;
+            pxzero          = sett.px0;
+            pyzero          = sett.py0;
+            phid            = sett.phid;
+
+            if check_dlock(t,x,ii)
+                data.code = -2;
+                break
+            end
+            
         elseif t == dt
             [x0_new,Tpath_new]  = randomize_ic(x0_og,Tpath,func2str(dynamics));
             x(ii,:,:) = x0_new;
@@ -365,6 +397,7 @@ while ii <= nTimesteps
 
     % idx of vehicle outside 20m from intersection center
     outside_idx = find(sqrt(sum(squeeze(x(ii,:,1:2))'.^2)) > 20);
+    outside_idx = find(sqrt(sum(squeeze(x(ii,:,1:2))'.^2)) > 20e6);
     if sum(success) == nAgents || any(success(outside_idx) == 0)
         break
     end
@@ -407,6 +440,24 @@ ret = struct('success', 0,                                 ...
              'u',       zeros(nTimesteps,nAgents,2),       ...
              'u0',      zeros(nTimesteps,nAgents,2),       ...
              't',       0);
+end
+
+function dlock = check_dlock(t,x,ii)
+dlock  = false;
+thresh = 0.05;
+check_time = 3;
+if t > check_time
+    dx = sum(squeeze(abs(x(ii,:,1:2) - x(ii-floor(check_time/0.01),:,1:2)))');
+    dv = squeeze(abs(x(ii,:,4)));
+    idx_x = find(dx<thresh);
+    idx_v = find(dv<thresh);
+
+    if ~isempty(intersect(idx_x,idx_v))
+        dlock = true;
+    end
+
+end
+
 end
 
 function [x0_rand,Tpath] = randomize_ic(x0,Tpath,dyn_mode)

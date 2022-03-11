@@ -3,6 +3,7 @@ clear; clc;
 
 % Load relevant parameters
 run('initial_conditions.m');
+run('physical_params.m');
 
 % Tracking Control Params
 Tc = 0.25;
@@ -24,9 +25,25 @@ c2 = 1;
 e1 = 0.5;
 e2 = 1.5;
 
+% Tracking Control Parameters -- Good!
+a1 = 0.5; a2 = a1; a3 = 2*a1; a4 = a3; 
+k1 = 5.0; k2 = 5.0;
+
 % Tracking Control Parameters
-a1 = 0.4; a2 = a1; a3 = 2*a1; a4 = 2*a1; 
-k1 = 2.0; k2 = 2.0;
+a1 = 2.0; a2 = a1; a3 = 1.0; a4 = a3; 
+k1 = 2.0; k2 = k1;
+
+% Tracking Control Parameters
+a1 = 2.0; a2 = a1; a3 = 1.0; a4 = a3; 
+k1 = 0.75; k2 = k1;
+
+% Tracking Control Parameters
+a1 = 2.0; a2 = a1; a3 = 1.0; a4 = a3; 
+k1 = 5.0; k2 = k1;
+
+% Tracking Control Parameters
+a1 = 2.0; a2 = a1; a3 = 2.0; a4 = a3; 
+k1 = 5.0; k2 = k1;
 
 % Mode
 mode = 'kinematic';

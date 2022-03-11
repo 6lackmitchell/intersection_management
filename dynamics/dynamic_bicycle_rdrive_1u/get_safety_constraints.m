@@ -281,7 +281,7 @@ Ns = settings.Ns;
 idx    = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 xx     = x(aa,:);
 
-kf      = 10; % Class K gain
+kf      = 100; % Class K gain
 hf      = settings.SL - xx(4);
 Lfhf    = 0;
 Lghf    = [-1];
@@ -424,7 +424,7 @@ for aa = 1:Na
        
         if strcmp(settings.cbf_type,'nominal_cbf')
             % Nominal CBF (Rel-Deg 2)
-            H   = h0;
+            H   = h0 - eps;
             LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
             LgH = 2*(dx*dax_con + dy*day_con);
 
@@ -437,11 +437,21 @@ for aa = 1:Na
 
         elseif strcmp(settings.cbf_type,'rv_cbf')
             % Robust-Virtual CBF
-            a1    = 0.1;
+            a1    = 0.1;%0.2;
+%             a1    = 5;%0.2;
+            tbar  = 1;
             kh0   = 1;
-            H     = h   + a1*max([tau-1,eps])*h0^(1/kh0);
-            LfH   = Lfh + a1*(max([tau-1,eps])*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
+            k2    = max([tau-tbar,eps]);
+            H     = h   + a1*k2*h0^(1/kh0);
+            LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
             LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
+
+%         elseif strcmp(settings.cbf_type,'rv_cbf')
+%             % Robust-Virtual CBF
+%             a1    = 0.1;
+%             H     = h   + a1*h0;
+%             LfH   = Lfh + a1*Lfh0;
+%             LgH   = Lgh;
         end
 
         % PCCA Contribution
