@@ -64,6 +64,63 @@ if strcmp(path,'linear')
     else
         rdot = [0 0];
     end
+
+elseif strcmp(path,'linear_before_turn')
+    % Adjust tau as needed according to progress
+    dX = xF - xS;
+    if dX(1) == 0
+        tau_est1 = 0;
+    else
+        tau_est1 = (x(1) - xS(1)) / dX(1);
+    end
+    if dX(2) == 0
+        tau_est2 = 0;
+    else
+        tau_est2 = (x(2) - xS(2)) / dX(2);
+    end
+    
+    tau = min(1,max([tau,tau_est1,tau_est2]));
+%     tau = min(1,max([tau_est1,tau_est2]));
+    kt = 3;
+    r  = xF * (1-exp(-kt*tau)) + xS * exp(-kt*tau);
+        
+    rddot = [0 0];
+    if tau < 1
+        rdot = (xF - xS) / T * kt*tau*exp(-kt*tau);
+    elseif norm(r - x(1:2)) > epsilon
+        rdot = (r - x(1:2)) / 0.75;
+    else
+        rdot = [0 0];
+    end
+
+
+elseif strcmp(path,'linear_after_turn')
+    % Adjust tau as needed according to progress
+    dX = xF - xS;
+    if dX(1) == 0
+        tau_est1 = 0;
+    else
+        tau_est1 = (x(1) - xS(1)) / dX(1);
+    end
+    if dX(2) == 0
+        tau_est2 = 0;
+    else
+        tau_est2 = (x(2) - xS(2)) / dX(2);
+    end
+    
+    tau = min(1,max([tau,tau_est1,tau_est2]));
+%     tau = min(1,max([tau_est1,tau_est2]));
+    kt = 2;
+    r  = xF * exp(kt*(tau-1)) + xS *(1 - exp(kt*(tau-1)));
+        
+    rddot = [0 0];
+    if tau < 1
+        rdot = (xF - xS) / T * kt*tau*exp(kt*(tau-1));
+    elseif norm(r - x(1:2)) > epsilon
+        rdot = (r - x(1:2)) / 0.75;
+    else
+        rdot = [0 0];
+    end
     
     
     

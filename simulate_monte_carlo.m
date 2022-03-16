@@ -20,7 +20,7 @@ clc; clear; close all; restoredefaultpath;
 campaign       = "intersection_crossing_turning";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
-cbf_type       = "ff_cbf";
+cbf_type       = "rv_cbf";
 pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
@@ -59,7 +59,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 5;
+nTrials        = 1000;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -77,12 +77,15 @@ controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
 success_rate = 0;
-fraction_feasible = 0;
+best_success = 0;
+best_average = 50;
+fraction_feasible = 0; 
 fraction_phys_vio = 1;
+fraction_deadlock = 1;
 
 % while fraction_feasible < 1 || fraction_phys_vio > 0
-% while success_rate < 1
-% while success_rate < 1
+% % while fraction_deadlock > 0 || fraction_phys_vio > 0
+while success_rate < 1
 tic
 parfor nn = 1:nTrials
 % for nn = 1:nTrials
@@ -120,7 +123,7 @@ beep
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
 filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
-save(filename)
+% save(filename)
 
 % Analyze Throughput Results
 % 01.13.2022
@@ -177,8 +180,13 @@ max_phy_vio         = max(abs(vio_mags(find(vio_mags < 0))))
 mean_all            = mean(finished,'all');
 mean_endtime        = mean(endtime(find(infeas==1))); 
 
-% end
+if success_rate > best_success || (success_rate == best_success && average_time < best_average)
+    best_success = success_rate;
+    best_average = average_time;
+    save(filename)
+end
 
+end
 
 %% Miscellaneous Helper Functions
 function trial_data = run_one_trial(trial_setup)

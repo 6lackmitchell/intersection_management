@@ -430,28 +430,40 @@ for aa = 1:Na
 
         elseif strcmp(settings.cbf_type,'ff_cbf')
             % Future Focused CBF
-            l0  = h0;
-            H   = h;
+            H   = h - eps;
             LfH = Lfh;
             LgH = Lgh;
 
+%         elseif strcmp(settings.cbf_type,'rv_cbf')
+%             % Robust-Virtual CBF
+%             a1    = 1;%0.5;%0.2;
+% %             a1    = 5;%0.2;
+%             tbar  = (xa(4)+xi(4))/9.81;%0.5;
+%             kh0   = 1;
+% %             k2    = max([tau-tbar,eps]);
+% %             k2    = max([h,1]);
+%             H     = h   + a1*k2*h0^(1/kh0);
+%             LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
+%             LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
+
         elseif strcmp(settings.cbf_type,'rv_cbf')
             % Robust-Virtual CBF
-            a1    = 0.1;%0.2;
+            a1    = 0.1;
 %             a1    = 5;%0.2;
-            tbar  = 1;
+            tbar  = 1;%(xa(4)+xi(4))/9.81;%0.5;
             kh0   = 1;
             k2    = max([tau-tbar,eps]);
-            H     = h   + a1*k2*h0^(1/kh0);
-            LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
-            LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
+            H     = h   + a1*k2*h0^(1/kh0) - 10*eps;
+            LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + a1*(tau>tbar)*tau_dot_unc*h0^(1/kh0));
+            LgH   = Lgh + a1*(tau>tbar)*tau_dot_con*h0^(1/kh0);
 
 %         elseif strcmp(settings.cbf_type,'rv_cbf')
 %             % Robust-Virtual CBF
 %             a1    = 0.1;
-%             H     = h   + a1*h0;
+%             H     = h   + a1*(h0-0.5);
 %             LfH   = Lfh + a1*Lfh0;
 %             LgH   = Lgh;
+
         end
 
         % PCCA Contribution

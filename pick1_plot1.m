@@ -1,5 +1,7 @@
 clear;
-filename = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\ff_cbf\no_priority\ff_cbf_4MonteCarlo_N1000_Nnon0_K10_winner.mat'
+% filename = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_straight\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\nominal_cbf\no_priority\ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat'
+filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\';
+filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat');
 load(filename)
 
 TTI     = Inf*ones(nTrials*nAgents,1);
@@ -56,7 +58,7 @@ mean_endtime        = mean(endtime(find(infeas==1)));
 find(infeas==1)
 find(pvios>0)
 % find(successes==0)
-% find(dlock>0)
+find(dlock>0)
 %%
 
 clf;
@@ -64,7 +66,9 @@ clf;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(4); % Deadlock for nominal case
+% data = trial_data(582); % Deadlock for nominal case
+% data = trial_data(137); % Infeasible for ff case
+data = trial_data(200); % Success for rv case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -88,7 +92,7 @@ figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
-    if jj == 3
+    if jj == 1
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,1),'LineWidth',lw)
     end
@@ -101,7 +105,7 @@ figure(3);
 title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
-    if jj == 3
+    if jj == 1
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
     end

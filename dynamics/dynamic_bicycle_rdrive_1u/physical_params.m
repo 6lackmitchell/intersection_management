@@ -15,7 +15,7 @@ nLanes    = 1;
 nWay      = 4;
 nControls = 2;
 
-wmax      = 3*pi/4;
+wmax      = pi/2;
 amax      = 2 * G;
 amax      = 1 * G;
 umax      = [wmax; amax];

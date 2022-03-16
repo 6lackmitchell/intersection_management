@@ -32,6 +32,7 @@ xd     = settings.r(aa,1);
 yd     = settings.r(aa,2);
 xdotd  = settings.rdot(aa,1);
 ydotd  = settings.rdot(aa,2);
+vd     = sqrt(xdotd^2 + ydotd^2) - 0.01;
 
 % Compute xlqr states
 xdot   = x(4)*(cos(x(3)) - sin(x(3))*tan(x(5)));
@@ -53,13 +54,23 @@ B = [0 0;
      1 0;
      0 1];
 
-% LQR Cost Function: x'*Q*x + u'*R*u
-xy_gain    = 25;
-xydot_gain = 1;
+% % LQR Cost Function: x'*Q*x + u'*R*u
+% xy_gain    = 25;
+% xydot_gain = 1;
 
-% LQR Cost Function: x'*Q*x + u'*R*u
-xy_gain    = 10;
-xydot_gain = 1;
+% % LQR Cost Function: x'*Q*x + u'*R*u
+% xy_gain    = 10;
+% xydot_gain = 1;
+
+if vd^2 > xdotd^2 && vd^2 > ydotd^2
+    % LQR Cost Function: x'*Q*x + u'*R*u
+    xy_gain    = 50;
+    xydot_gain = 25;
+else
+    % LQR Cost Function: x'*Q*x + u'*R*u
+    xy_gain    = 1;
+    xydot_gain = 1;
+end
 
 % xy_gain    = 1e-4;
 % xydot_gain = 1e-1;
