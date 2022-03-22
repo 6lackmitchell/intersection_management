@@ -1,20 +1,20 @@
 function [A,b,params] = get_safety_constraints(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
-
-% Unpack PCCA Settings
-% agent = settings.AAA;
-Na    = settings.Na;
-
 % Add additional settings
 settings.('Nu')   = 1;
 settings.('lw')   = 3.0;
 
-v00 = zeros(Na*settings.Nu,1);
-h00 = inf*ones(Na,1);
+% Unpack PCCA Settings
+Na    = settings.Na;
+Nu    = settings.Nu;
+Ns    = settings.Ns;
+Ng    = settings.Ng;
+Nc    = factorial(Na-1);
 
+% Specify matrix dimensions
 nCons = 4;
-nRows = nCons*Na+settings.Ns;
-nCols = settings.Nu*Na+settings.Ns;
+nRows = nCons*Na+2*Nc;
+nCols = Nu*Na+Ns+Ng;
 
 A  = zeros(nRows,nCols);
 b  = zeros(nRows,1);
@@ -38,12 +38,13 @@ end
 
 [A4,b4,h4,h04,v00,h00] = get_collision_avoidance_constraints(t,x,settings);
 
-row_idx = nCons*Na+1:nCons*Na+factorial(Na-1);
+row_idx  = nCons*Na+1:nCons*Na+2*Nc;
+row_idxh = nCons*Na+1:nCons*Na+Nc;
 
 A(row_idx,:) = A4;
 b(row_idx)   = b4;
-h(row_idx)   = h4;
-h0(row_idx)  = h04;
+h(row_idxh)  = h4;
+h0(row_idxh) = h04;
     
 % Organize parameters to be returned
 params = struct('h',   h,   ...
@@ -59,10 +60,11 @@ lw = settings.lw;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 Lr = 1;
 
 xx = x(aa,:);
-A = zeros(2,Nu*Na+Ns);
+A = zeros(2,Nu*Na+Ns+Ng);
 b = ones(2,1);
 
 % vx and vy
@@ -113,6 +115,7 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 % Lr = settings.Lr;
 % Lf = settings.Lf;
 lw = settings.lw;
@@ -135,7 +138,7 @@ Lfh2     = vx;
 Lf2h2    = ax_unc;
 LgLf2    = ax_con;
 
-A        = zeros(2,Nu*Na+Ns);
+A        = zeros(2,Nu*Na+Ns+Ng);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -154,6 +157,7 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 % Lr = settings.Lr;
 % Lf = settings.Lf;
 lw = settings.lw;
@@ -176,7 +180,7 @@ Lfh2     = -vy;
 Lf2h2    = -ay_unc;
 LgLf2    = -ay_con;
 
-A        = zeros(2,Nu*Na+Ns);
+A        = zeros(2,Nu*Na+Ns+Ng);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -195,6 +199,7 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 % Lr = settings.Lr;
 % Lf = settings.Lf;
 lw = settings.lw;
@@ -217,7 +222,7 @@ Lfh2     = vy;
 Lf2h2    = ay_unc;
 LgLf2    = ay_con;
 
-A        = zeros(2,Nu*Na+Ns);
+A        = zeros(2,Nu*Na+Ns+Ng);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -236,6 +241,7 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 % Lr = settings.Lr;
 % Lf = settings.Lf;
 lw = settings.lw;
@@ -258,7 +264,7 @@ Lfh2     = -vx;
 Lf2h2    = -ax_unc;
 LgLf2    = -ax_con;
 
-A        = zeros(2,Nu*Na+Ns);
+A        = zeros(2,Nu*Na+Ns+Ng);
 b        = zeros(2,1);
 
 A(1,idx) = -LgLf1;
@@ -277,6 +283,7 @@ aa = settings.aa;
 Nu = settings.Nu;
 Na = settings.Na;
 Ns = settings.Ns;
+Ng = settings.Ng;
 
 idx    = Nu*(aa-1)+1:Nu*(aa-1)+Nu;
 xx     = x(aa,:);
@@ -298,7 +305,7 @@ else
     Lghr    = [1];
 end
 
-A        = zeros(2,Nu*Na+Ns);
+A        = zeros(2,Nu*Na+Ns+Ng);
 b        = zeros(2,1);
 A(1,idx) = -Lghf;
 A(1,Na+idx) = -1; % Slack Parameter for speed limit
@@ -317,10 +324,12 @@ function [A,b,Ht,H0,v00,h00] = get_collision_avoidance_constraints(t,x,settings)
 Nu    = settings.Nu;
 Na    = settings.Na;
 Ns    = settings.Ns;
+Ng    = settings.Ng;
 tmax  = settings.lookahead;
 uNom  = settings.uNom;
 AAA   = settings.AAA;
 wHat  = settings.wHat;
+gamma = settings.gamma;
 
 Lr = 1;
 sw = 1.0;
@@ -328,25 +337,27 @@ sw = 1.0;
 betadot = uNom(1:2:end);
 
 Nc  = factorial(Na-1);
-A   = zeros(Nc,Nu*Na+Ns);
-b   = zeros(Nc,1);
+A   = zeros(2*Nc,Nu*Na+Ns+Ng);
+b   = zeros(2*Nc,1);
 Ht  = zeros(Nc,1);
 H0  = zeros(Nc,1);
 v00 = zeros(Nu*Na,1);
-h00 = zeros(Na,1);
+h00 = zeros(Nc,1);
+extra_idx = 1;%*(Ng>0);
 cc  = 1;
-ss  = 1;
+hh  = 1;
 
 % Loop through every scheduled agent for PCCA
 for aa = 1:Na
     
 %     Aw = []; bw = []; hw = [];
     nc  = Na-aa;
-    Aw  = zeros(nc,Nu*Na+Ns);
-    bw  = zeros(nc,1);
+    Aw  = zeros(2*nc,Nu*Na+Ns+Ng);
+    bw  = zeros(2*nc,1);
     hw  = zeros(nc,1);
     hw0 = zeros(nc,1);
     dd  = 1;
+    ss  = 1;
     
     % Loop through all other agents for interagent completeness
     for ii = aa+1:Na
@@ -449,20 +460,12 @@ for aa = 1:Na
         elseif strcmp(settings.cbf_type,'rv_cbf')
             % Robust-Virtual CBF
             a1    = 0.1;
-%             a1    = 5;%0.2;
-            tbar  = 1;%(xa(4)+xi(4))/9.81;%0.5;
+            tbar  = 1;
             kh0   = 1;
             k2    = max([tau-tbar,eps]);
             H     = h   + a1*k2*h0^(1/kh0) - 10*eps;
             LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + a1*(tau>tbar)*tau_dot_unc*h0^(1/kh0));
             LgH   = Lgh + a1*(tau>tbar)*tau_dot_con*h0^(1/kh0);
-
-%         elseif strcmp(settings.cbf_type,'rv_cbf')
-%             % Robust-Virtual CBF
-%             a1    = 0.1;
-%             H     = h   + a1*(h0-0.5);
-%             LfH   = Lfh + a1*Lfh0;
-%             LgH   = Lgh;
 
         end
 
@@ -470,24 +473,39 @@ for aa = 1:Na
         if settings.pcca
             LfH = LfH + Lgh*wHat(AAA,1:4)';
         end
-    
-        % Inequalities: Ax <= b
-        Aw(dd,1:Na*Nu)  = -LgH;
-        bw(dd)          = LfH + l0*H; 
-        hw(dd)          = H;
-        hw0(dd)         = h0;
 
-        dd = dd + 1;
+        aH = l0*H;
+
+        % Inequalities: Ax <= b
+%         % Gamma as a decision variable
+%         Aw(dd,  idx_aa)   = -LgH(idx_aa);
+%         Aw(dd+1,idx_ii)   = -LgH(idx_ii);
+%         Aw(dd,Nu*Na+Ns+dd)   = -(LfH + aH);
+%         Aw(dd+1,Nu*Na+Ns+dd) = +(LfH + aH);
+%         bw(dd)            = 0;
+%         bw(dd+1)          = +(LfH + aH);
+
+        % Gamma as a fixed parameter
+        Aw(dd,  idx_aa) = -LgH(idx_aa);
+        Aw(dd+1,idx_ii) = -LgH(idx_ii);
+        bw(dd)          = gamma(dd)*(LfH + aH);
+        bw(dd+1)        = (1-gamma(dd))*(LfH + aH);       
+    
+        hw(ss)          = H;
+        hw0(ss)         = h0;
+
+        dd = dd + 1 + extra_idx;
         ss = ss + 1;
 
     end
     
-    A(cc:cc+(nc-1),:) = Aw;
-    b(cc:cc+(nc-1))   = bw;
-    Ht(cc:cc+(nc-1))  = hw;
-    H0(cc:cc+(nc-1))  = hw0;
+    A(cc:cc+(1+extra_idx)*(nc-1)+extra_idx,:) = Aw;
+    b(cc:cc+(1+extra_idx)*(nc-1)+extra_idx)   = bw;
+    Ht(hh:hh+(nc-1))  = hw;
+    H0(hh:hh+(nc-1))  = hw0;
 
-    cc = cc + nc;
+    cc = cc + (1+extra_idx)*nc;
+    hh = hh + nc;
     
 end
 

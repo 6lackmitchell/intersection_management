@@ -20,7 +20,7 @@ clc; clear; close all; restoredefaultpath;
 campaign       = "intersection_crossing_turning";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
-cbf_type       = "rv_cbf";
+cbf_type       = "ff_cbf";
 pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;

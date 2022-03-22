@@ -47,8 +47,8 @@ wHat     = settings.wHat;
 % Organize parameters
 Na  = size(x,1);       % Number of agents
 Nn  = settings.Nn;     % Number of noncommunicating agents
-Ns  = Na;              % Number of slack variables
-Nd  = Na*Nu + Ns;      % Number of decision variables
+Ng  = factorial(Na-1);              % Number of slack variables
+Nd  = Na*(Nu-1) + Ng;      % Number of decision variables
 
 % Initialize variables
 u          = zeros(Na,Nu);
@@ -56,6 +56,7 @@ uNom       = zeros(Na,Nu);
 mincbf     = zeros(Na,1);
 sols       = zeros(Na,Nd);
 u00        = zeros(Na*Nu,1);
+gamma      = zeros(factorial(Na-1),1);
 sat_vec    = [umax(1); umax(2)];  
 virt_violations = zeros(Na,1);
 phys_violations = zeros(Na,1);
@@ -69,13 +70,45 @@ for aa = 1:Na
     ctrl_idx = (-1:0)+aa*Nu;
             
     % Generate nominal control input from trajectory tracking controller
-%     u0  = ailon2020_kb_tracking_fxts(t,x(aa,:),aa,settings,params);
-%     [u0,settings]  = ailon2020_kb_tracking_asymptotic(t,x(aa,:),aa,settings,params);
     [u0]  = lqr_tracking_kb(t,x(aa,:),aa,settings);
     u0  = min(sat_vec,max(-sat_vec,u0)); % Saturate nominal control
     u00(ctrl_idx) = u0;
 
 end
+
+
+
+% Compute values for priority metrics
+power    = 2;
+xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
+ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
+% h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
+% Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
+
+% Compute priority
+metric_settings = struct('metric',  settings.pmetric, ...
+                         'power',   power,            ...
+                         'xdot',    [xdot ydot],      ...
+                         'xdes',    settings.r,       ...
+                         'xdesdot', settings.rdot,    ...
+                         'prior',   prior,            ...
+                         'Na',      Na,               ...
+                         'dt',      settings.dt);
+%                          'h',       h_metric,         ...
+%                          'Lgh',     Lgh,              ...
+priority = get_priority_metric(t,x,metric_settings);
+prior    = priority;
+
+
+gg = 1;
+for g1 = 1:Na
+    for g2 = g1+1:Na
+        pweight   = priority(g1) / (priority(g1) + priority(g2));
+        gamma(gg) = 1 - sqrt(pweight);
+        gg = gg + 1;
+    end
+end
+
 
 % Generate "Energy"-based Priority Metric
 lookahead       = 5.0;
@@ -87,6 +120,7 @@ safety_settings = struct('Na',        Na,              ...
                          'vEst',      uLast,           ...
                          'wHat',      wHat,            ...
                          'uNom',      u00,             ...
+                         'gamma',     gamma,           ...
                          'tSlots',    tSlots,          ...
                          'lookahead', lookahead,       ...
                          'pcca',      settings.pcca,   ...
@@ -107,27 +141,6 @@ if phys_violations(aa) > 0
     data = struct('code',-1,'v_vio', virt_violations,'p_vio', phys_violations, 'vio_mag', vio_magnitude);
     return
 end
-
-% Compute values for priority metrics
-power    = 2;
-xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
-ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
-h_metric = safety_params.h(end-(factorial(Na-1)-1):end);
-Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
-
-% Compute priority
-metric_settings = struct('metric',  settings.pmetric, ...
-                         'power',   power,            ...
-                         'xdot',    [xdot ydot],      ...
-                         'xdes',    settings.r,       ...
-                         'xdesdot', settings.rdot,    ...
-                         'h',       h_metric,         ...
-                         'Lgh',     Lgh,              ...
-                         'prior',   prior,            ...
-                         'Na',      Na,               ...
-                         'dt',      settings.dt);
-priority = get_priority_metric(t,x,metric_settings);
-prior    = priority;
 
 
 for aa = 1:Na
