@@ -18,8 +18,8 @@ nCols = Nu*Na+Ns+Ng;
 
 A  = zeros(nRows,nCols);
 b  = zeros(nRows,1);
-h  = zeros(nRows,1);
-h0 = zeros(nRows,1);
+h  = zeros(nRows-Nc,1);
+h0 = zeros(nRows-Nc,1);
 
 for aa = 1:Na
     
@@ -435,13 +435,14 @@ for aa = 1:Na
        
         if strcmp(settings.cbf_type,'nominal_cbf')
             % Nominal CBF (Rel-Deg 2)
-            H   = h0 - eps;
+            l0 = l0;
+            H   = h0;
             LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
             LgH = 2*(dx*dax_con + dy*day_con);
 
         elseif strcmp(settings.cbf_type,'ff_cbf')
             % Future Focused CBF
-            H   = h - eps;
+            H   = h;
             LfH = Lfh;
             LgH = Lgh;
 
@@ -459,13 +460,23 @@ for aa = 1:Na
 
         elseif strcmp(settings.cbf_type,'rv_cbf')
             % Robust-Virtual CBF
-            a1    = 0.1;
+            a1    = 0.5;
             tbar  = 1;
-            kh0   = 1;
+            kh0   = 5;
             k2    = max([tau-tbar,eps]);
-            H     = h   + a1*k2*h0^(1/kh0) - 10*eps;
+            H     = h   + a1*k2*h0^(1/kh0);
             LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + a1*(tau>tbar)*tau_dot_unc*h0^(1/kh0));
             LgH   = Lgh + a1*(tau>tbar)*tau_dot_con*h0^(1/kh0);
+
+%         elseif strcmp(settings.cbf_type,'rv_cbf')
+%             % Robust-Virtual CBF
+%             a1    = 0.1;
+%             tbar  = 1;
+%             kh0   = 1;
+%             k2    = max([tau-tbar,eps]);
+%             H     = h   + a1*k2*h0^(1/kh0) - 10*eps;
+%             LfH   = Lfh + a1*(k2*(1/kh0)*h0^(1/kh0-1)*Lfh0 + a1*(tau>tbar)*tau_dot_unc*h0^(1/kh0));
+%             LgH   = Lgh + a1*(tau>tbar)*tau_dot_con*h0^(1/kh0);
 
         end
 
@@ -475,6 +486,26 @@ for aa = 1:Na
         end
 
         aH = l0*H;
+
+        % Modify gamma
+        if AAA > 2% && ii == 4
+            responsible = 0.6;
+        else
+            responsible = 0.4;
+%             kg = 0.25;
+%             responsible = gamma(dd)*(1 - exp(-kg*H)) + 0.5*exp(-kg*H);
+        end
+%         if AAA == 4
+%             if ii == 4
+%                 if LfH + aH < 0
+%                     responsible = max(responsible,0.7);% + 0.1;
+%                 else
+%                     responsible = min(responsible,0.3);% - 0.1;
+% %                 responsible = -sign(LfH + aH);
+%                 end
+%             end
+%         end
+
 
         % Inequalities: Ax <= b
 %         % Gamma as a decision variable
@@ -488,8 +519,8 @@ for aa = 1:Na
         % Gamma as a fixed parameter
         Aw(dd,  idx_aa) = -LgH(idx_aa);
         Aw(dd+1,idx_ii) = -LgH(idx_ii);
-        bw(dd)          = gamma(dd)*(LfH + aH);
-        bw(dd+1)        = (1-gamma(dd))*(LfH + aH);       
+        bw(dd)          = responsible*(LfH + aH);
+        bw(dd+1)        = (1-responsible)*(LfH + aH); 
     
         hw(ss)          = H;
         hw0(ss)         = h0;

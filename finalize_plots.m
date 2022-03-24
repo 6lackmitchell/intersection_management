@@ -370,7 +370,7 @@ saveas(gcf,strcat(filepath,'success_cbfs_650.eps'),'epsc')
 
 
 %% Safety Helper
-function [Ht,H0] = get_safety_values(x)
+function [Ht,H0,LFH] = get_safety_values(x)
 Na    = 4;
 tmax  = 5;
 
@@ -379,6 +379,7 @@ sw = 1.0;
 Nc  = factorial(Na-1);
 Ht  = zeros(Nc,1);
 H0  = zeros(Nc,1);
+LFH = zeros(Nc,1);
 cc  = 1;
 ss  = 1;
 
@@ -388,6 +389,7 @@ for aa = 1:Na
     nc  = Na-aa;
     hw  = zeros(nc,1);
     hw0 = zeros(nc,1);
+    Lfhw = zeros(nc,1);
     dd  = 1;
     
     % Loop through all other agents for interagent completeness
@@ -419,6 +421,8 @@ for aa = 1:Na
         % h and hdot (= Lfh + Lgh*u)
         h0   = dx^2 + dy^2 - (2*sw)^2;
         h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
+        Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+
 
 %         % Robust-Virtual CBF
 %         a1    = 0.1;
@@ -436,6 +440,7 @@ for aa = 1:Na
         % Inequalities: Ax <= b
         hw(dd)          = H;
         hw0(dd)         = h0;
+        Lfhw(dd)        = Lfh;
 
         dd = dd + 1;
         ss = ss + 1;
@@ -444,6 +449,7 @@ for aa = 1:Na
 
     Ht(cc:cc+(nc-1))  = hw;
     H0(cc:cc+(nc-1))  = hw0;
+    LFH(cc:cc+(nc-1)) = Lfhw;
 
     cc = cc + nc;
     

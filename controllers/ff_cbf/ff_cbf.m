@@ -47,8 +47,9 @@ wHat     = settings.wHat;
 % Organize parameters
 Na  = size(x,1);       % Number of agents
 Nn  = settings.Nn;     % Number of noncommunicating agents
-Ng  = factorial(Na-1);              % Number of slack variables
-Nd  = Na*(Nu-1) + Ng;      % Number of decision variables
+Ng  = 0;               % Number of gamma variables
+Ns  = Na;              % Number of velocity slack variables
+Nd  = Na*Nu + Ns + Ng; % Number of decision variables
 
 % Initialize variables
 u          = zeros(Na,Nu);
@@ -104,7 +105,7 @@ gg = 1;
 for g1 = 1:Na
     for g2 = g1+1:Na
         pweight   = priority(g1) / (priority(g1) + priority(g2));
-        gamma(gg) = 1 - sqrt(pweight);
+        gamma(gg) = 1 - pweight;
         gg = gg + 1;
     end
 end
@@ -115,8 +116,9 @@ lookahead       = 5.0;
 safety_settings = struct('Na',        Na,              ...
                          'Nn',        Nn,              ...
                          'Ns',        Ns,              ...
+                         'Ng',        Ng,              ...
                          'SL',        settings.SL,     ...
-                         'AAA',       aa,              ...
+                         'AAA',       1,              ...
                          'vEst',      uLast,           ...
                          'wHat',      wHat,            ...
                          'uNom',      u00,             ...
@@ -158,8 +160,10 @@ for aa = 1:Na
 
         % Recompute safety w/ model of noncommunicating uCost
         uSafety = u00;
-        uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
+        uSafety(~ismember(find(uCost>-Inf),2*ctrl_idx)) = 0;
+        uCost   = [uSafety(2:2:Na*Nu); zeros(Ns,1)];
         safety_settings.uNom  = uSafety;
+        safety_settings.AAA   = aa;
 
         % D-CSS
         [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
@@ -200,13 +204,16 @@ for aa = 1:Na
     if exitflag ~= 2
         if t ~= 0.01
             beep
+            sol = [-9.81*ones(4,1); zeros(4,1)];
+        else
+            disp(t);
+            disp(exitflag);
+            disp(aa)
+            disp('Error');
+            data = struct('code',exitflag);
+            return
         end
-        disp(t);
-        disp(exitflag);
-        disp(aa)
-        disp('Error');
-        data = struct('code',exitflag);
-        return 
+         
     end
            
     u(aa,:)     = [u00(2*(aa-1)+1) sol(aa)];

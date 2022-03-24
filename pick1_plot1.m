@@ -68,7 +68,7 @@ dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
 % data = trial_data(582); % Deadlock for nominal case
 % data = trial_data(137); % Infeasible for ff case
-data = trial_data(200); % Success for rv case
+data = trial_data(9); % Success for rv case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -78,8 +78,17 @@ u0 = data.u0;
 sols = data.sols;
 violations = data.vios;    
 
+
+
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
+
+H   = zeros(ii,6,1);
+h0  = zeros(ii,6,1);
+Lfh = zeros(ii,6,1);
+for tcbf = 1:length(ii)
+    [H(tcbf,:),h0(tcbf,:),Lfh(tcbf,:)] = get_safety_values(squeeze(x(tcbf,:,:)));
+end
 
 % filename = strcat('datastore/',dyn_mode,'/',con_mode,'_',num2str(nAgents),'intersection_tests.mat');
 
@@ -104,14 +113,35 @@ hold off
 figure(3);
 title('Control Inputs Y')
 hold on
+colors = ['b','k','g','r'];
 for jj = 1:nAgents
-    if jj == 1
-    plot(tt,u(1:ii,jj,2),'LineWidth',lw)
-    plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
-    end
+%     if jj == 1
+    plot(tt,u(1:ii,jj,2),'LineWidth',lw,'Color',colors(jj))
+    plot(tt,u0(1:ii,jj,2),':','LineWidth',lw,'Color',colors(jj))
+%     end
 %     plot(tt,uNom(1:ii,jj,2),':','LineWidth',lw)
 end
 legend('u_{12}','\mu_{12}','u_{22}','\mu_{22}','u_{32}','\mu_{32}','u_{42}','\mu_{42}')
+hold off
+
+figure(4);
+title('Control Inputs Y')
+hold on
+colors = ['b','k','g','r'];
+for jj = 1:nAgents
+    plot(tt,(sols(1:ii,jj,8)-u(1:ii,4,2))/(jj+1),'LineWidth',lw,'Color',colors(jj))
+end
+legend('w_{14}','w_{24}','w_{34}','w_{44}')
+hold off
+
+figure(5);
+title('Lfh')
+hold on
+colors = ['b','k','g','r','y','m'];
+for jj = 1:6
+    plot(tt,Lfh(1:ii,jj),'LineWidth',lw,'Color',colors(jj))
+end
+legend('12','13','14','23','24','34')
 hold off
 
 % figure(4);
@@ -188,4 +218,117 @@ load(road_file)
 
 moviename = erase(filename,'.mat');
 cinematographer(dt,x(1:(ii),:,:),dyn_mode,obstacles,moviename)
+
+
+%% Safety Helper
+function [Ht,H0,LFH] = get_safety_values(x)
+Na    = 4;
+tmax  = 5;
+
+sw = 1.0;
+Lr = 1;
+
+Nc  = factorial(Na-1);
+Ht  = zeros(Nc,1);
+H0  = zeros(Nc,1);
+LFH = zeros(Nc,1);
+cc  = 1;
+ss  = 1;
+
+% Loop through every scheduled agent for PCCA
+for aa = 1:Na
+    
+    nc  = Na-aa;
+    hw  = zeros(nc,1);
+    hw0 = zeros(nc,1);
+    Lfhw = zeros(nc,1);
+    dd  = 1;
+    
+    % Loop through all other agents for interagent completeness
+    for ii = aa+1:Na
+        
+        xa = x(aa,:);
+        xi = x(ii,:);
+              
+        % dx and dy
+        dx  = xa(1) - xi(1);
+        dy  = xa(2) - xi(2);
+        
+        % dvx and dvy
+        vax = xa(4)*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));
+        vay = xa(4)*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));
+        vix = xi(4)*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));
+        viy = xi(4)*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));
+        dvx = vax - vix;
+        dvy = vay - viy;
+        
+        % Solve for minimizer of h
+        kh       = 1000.0; % This does not lead to safety violations
+        eps      = 1e-3;
+        tau_star = -(dx*dvx + dy*dvy)/(dvx^2 + dvy^2 + eps);
+        Heavy1   = heavyside(tau_star,kh,0);
+        Heavy2   = heavyside(tau_star,kh,tmax);
+        tau      = tau_star*Heavy1 - (tau_star - tmax)*Heavy2;
+
+        % accelerations -- controlled (con) and uncontrolled (unc)
+        axa_unc = -xa(4)^2/Lr*tan(xa(5))*(sin(xa(3)) + cos(xa(3))*tan(xa(5)));% - betadot(aa)*xa(4)*sin(xa(3))*sec(xa(5))^2;
+        axi_unc = -xi(4)^2/Lr*tan(xi(5))*(sin(xi(3)) + cos(xi(3))*tan(xi(5)));% - betadot(ii)*xi(4)*sin(xi(3))*sec(xi(5))^2;
+        aya_unc =  xa(4)^2/Lr*tan(xa(5))*(cos(xa(3)) - sin(xa(3))*tan(xa(5)));% + betadot(aa)*xa(4)*cos(xa(3))*sec(xa(5))^2;
+        ayi_unc =  xi(4)^2/Lr*tan(xi(5))*(cos(xi(3)) - sin(xi(3))*tan(xi(5)));% + betadot(ii)*xi(4)*cos(xi(3))*sec(xi(5))^2;
+
+        % dax and day
+        dax_unc = axa_unc - axi_unc;
+        day_unc = aya_unc - ayi_unc;
+        
+        % taudot
+        tau_star_dot_unc = -(dax_unc*(2*dvx*tau_star + dx) + day_unc*(2*dvy*tau_star + dy) + (dvx^2 + dvy^2)) / (dvx^2 + dvy^2 + eps);
+        Heavy_dot1_unc   = dheavyside(tau_star,kh,0)*tau_star_dot_unc;
+        Heavy_dot2_unc   = dheavyside(tau_star,kh,tmax)*tau_star_dot_unc;
+        tau_dot_unc      = tau_star_dot_unc*(Heavy1 - Heavy2) + tau_star*(Heavy_dot1_unc - Heavy_dot2_unc);
+
+        % h and hdot (= Lfh + Lgh*u)
+        h0   = dx^2 + dy^2 - (2*sw)^2;
+        h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
+        Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+
+
+%         % Robust-Virtual CBF
+%         a1    = 0.1;
+%         kh0   = 1;
+%         H     = h   + a1*(tau-1)*h0^(1/kh0);
+
+        % Robust-Virtual CBF
+        a1    = 0.1;
+        tbar  = 0.5;
+        tbar  = 1.0;
+        kh0   = 1;
+        k2    = max([tau-tbar,eps]);
+        H     = h   + a1*k2*h0;
+    
+        % Inequalities: Ax <= b
+        hw(dd)          = H;
+        hw0(dd)         = h0;
+        Lfhw(dd)        = Lfh;
+
+        dd = dd + 1;
+        ss = ss + 1;
+
+    end
+
+    Ht(cc:cc+(nc-1))  = hw;
+    H0(cc:cc+(nc-1))  = hw0;
+    LFH(cc:cc+(nc-1)) = Lfhw;
+
+    cc = cc + nc;
+    
+end
+
+end
+
+function [H] = heavyside(x,k,offset)
+%HEAVYSIDE Summary of this function goes here
+%   Detailed explanation goes here
+H = 1/2 * (1 + tanh(k*(x - offset)));
+end
+
 
