@@ -145,8 +145,10 @@ for aa = 1:Na
 
         % Recompute safety w/ model of noncommunicating uCost
         uSafety = u00;
-        uSafety(~ismember(find(uCost>-Inf),ctrl_idx)) = 0;
+        uSafety(~ismember(find(uCost>-Inf),2*ctrl_idx)) = 0;
+        uCost   = [uSafety(2:2:Na*Nu); zeros(Ns,1)];
         safety_settings.uNom  = uSafety;
+        safety_settings.AAA   = aa;
 
         % D-CSS
         [As,bs,safety_params] = get_safety_constraints(t,x,safety_settings);
