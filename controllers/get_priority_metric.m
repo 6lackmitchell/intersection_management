@@ -27,6 +27,12 @@ switch settings.metric
         idxLF = 1:1:settings.Na;
         LF    = ones(settings.Na,1);
 
+    case 'high_proximity'
+        % High Proximity to Intersection Center gets High Priority
+        LF = 1/2*vecnorm(x(:,1:2)').^2;
+        [~,idxLF] = sort(LF,'descend');
+        [LF,~]    = sort(LF,'ascend');
+
     case 'fcfs'
         % First Come First Served
         if t > settings.dt
