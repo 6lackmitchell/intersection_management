@@ -414,13 +414,24 @@ for aa = 1:Na
         % Class K Function(s)
         l0   = settings.classk;
         l1   = sqrt(6*l0);
-        
-        % h and hdot (= Lfh + Lgh*u)
+
+        % Alternate safety scheme
         h0   = dx^2 + dy^2 - (2*sw)^2;
         h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
-        Lfh0 = 2*dx*dvx + 2*dy*dvy;
-        Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+        decay_term = 0;%1 - exp(-3*max([h,0]));
+        P    = 2*(dx*dvx+dy*dvy)*(dx*dvy-dy*dvx)/(dvx^2+dvy^2)^2;
+        Lfah =  P*(dvx*aya_unc-dvy*axa_unc);
+        Lfih = -P*(dvx*ayi_unc-dvy*axi_unc);
+        Lfh  = Lfah + Lfih*decay_term;
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
+        Lgh(idx_ii) = Lgh(idx_ii) * decay_term;
+
+%         % h and hdot (= Lfh + Lgh*u)
+%         h0   = dx^2 + dy^2 - (2*sw)^2;
+%         h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
+%         Lfh0 = 2*dx*dvx + 2*dy*dvy;
+%         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+%         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
        
         if strcmp(settings.cbf_type,'nominal_cbf')
             % Nominal CBF (Rel-Deg 2)

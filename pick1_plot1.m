@@ -68,7 +68,7 @@ dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
 % data = trial_data(582); % Deadlock for nominal case
 % data = trial_data(137); % Infeasible for ff case
-data = trial_data(200); % Success for rv case
+data = trial_data(9); % Success for rv case
 code = data.code;
 t = data.t;
 dt = 0.01;
