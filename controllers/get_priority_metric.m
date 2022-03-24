@@ -63,6 +63,7 @@ switch settings.metric
         % High Required Effort for safe control gets High Priority
         LF = 1/2*sum(settings.Lgh.^2);
         [~,idxLF] = sort(LF,'ascend');
+        [LF,~]    = sort(LF,'descend');
 
     case 'low_energy'
         % Low Required Effort for safe control gets High Priority
