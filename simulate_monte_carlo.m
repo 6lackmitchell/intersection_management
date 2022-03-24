@@ -21,12 +21,12 @@ campaign       = "ford_data";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
 cbf_type       = "nominal_cbf";
-pmetric        = "fcfs";
+pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
-backup         = false;
+backup         = true;
 pcca           = false;
-input_bounds   = true;
+input_bounds   = false;
 class_k_l0     = 10.0;
 
 % Add Desired Paths
@@ -77,8 +77,8 @@ controller = str2func(con_mode);
 
 %% Execute Monte Carlo Simulation
 tic
-% parfor nn = 1:nTrials
-for nn = 1:nTrials
+parfor nn = 1:nTrials
+% for nn = 1:nTrials
 
     % Set up trial
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);

@@ -43,6 +43,7 @@ switch settings.metric
         
         LF = 1/2*vecnorm(x(:,1:2)').^2;
         [~,idxLF] = sort(LF,'descend');
+        [LF,~]    = sort(LF,'ascend');
 
     case 'FCFS_V'
         % First Come First Served
@@ -89,10 +90,13 @@ switch settings.metric
 end
 
 priority = zeros(settings.Na,1);
-for aa = 1:settings.Na
-%     priority(idxLF(aa)) = settings.power^(aa-1);
-    priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
-end
+% for aa = 1:settings.Na
+% %     priority(idxLF(aa)) = settings.power^(aa-1);
+%     priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
+% end
+
+p = settings.power*LF.^2/(sum(LF.^2));
+priority(idxLF) = p;
 
 
 end
