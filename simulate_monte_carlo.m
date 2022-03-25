@@ -17,16 +17,16 @@
 clc; clear; close all; restoredefaultpath;
 
 % Dynamics and Controller modes
-campaign       = "ford_data";
+campaign       = "ford_data/straight";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
 cbf_type       = "nominal_cbf";
-pmetric        = "no_priority";
+pmetric        = "high_energy";
 cost_mode      = "costs";
 im_used        = 0;
 backup         = true;
 pcca           = false;
-input_bounds   = false;
+input_bounds   = true;
 class_k_l0     = 10.0;
 
 % Add Desired Paths
@@ -113,7 +113,7 @@ beep
 file_settings = struct('campaign',campaign,'dyn_mode',dyn_mode,'cbf_txt',cbf_type,'pmetric',pmetric,'input_bounds',input_bounds,'backup',backup,'pcca',pcca);
 file_description = get_file_description(file_settings);
 filename = strcat(file_description,con_mode,'_',num2str(nAgents),'MonteCarlo_N',num2str(nTrials),'_Nnon',num2str(nNon),'_K',num2str(class_k_l0),'.mat');
-% save(filename)
+save(filename)
 
 % Analyze Throughput Results
 % 01.13.2022

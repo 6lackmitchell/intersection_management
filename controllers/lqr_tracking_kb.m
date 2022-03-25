@@ -89,7 +89,13 @@ P = [-x(4)*sin(x(3))*sec(x(5))^2 cos(x(3))-sin(x(3))*tan(x(5)); ...
       x(4)*cos(x(3))*sec(x(5))^2 sin(x(3))+cos(x(3))*tan(x(5))];
 q = [-ydot*phidot; xdot*phidot];
 
-u = P \ (ulqr - q);
+if x(4) > 0.01
+    u = P \ (ulqr - q);
+else
+    ar = norm(ulqr);
+    w  = 0;
+    u = [w; ar];
+end
 % if aa > 1
 %     u(1) = 0;
 % end

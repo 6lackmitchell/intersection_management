@@ -64,15 +64,15 @@ nAgents  = size(x0,1);
 nStates  = size(x0,2);
               
 % Goal Location Setup
-xGoal{1} = [ hlw  -lw;
-             hlw   0.0;
-             0.0   hlw;
-            -lw    hlw;
-            -(far^2)   hlw];
-% xGoal{1} = [ hlw    -lw;
-%              hlw      0;
-%              hlw     lw;
-%              hlw     (far^2)]; 
+% xGoal{1} = [ hlw  -lw;
+%              hlw   0.0;
+%              0.0   hlw;
+%             -lw    hlw;
+%             -(far^2)   hlw];
+xGoal{1} = [ hlw    -lw;
+             hlw      0;
+             hlw     lw;
+             hlw     (far^2)]; 
 xGoal{2} = [-hlw     lw;
             -hlw      0;
             -hlw    -lw;
@@ -97,22 +97,22 @@ xGoal{4} = [-lw     -hlw;
 first_T   = 0.5;
 second_T  = 0.01;
 last_T    = 1.0;
-Tpath{1} = [1 1 3 1 last_T];
-% Tpath{1} = [1 first_T second_T last_T];
+% Tpath{1} = [1 1 3 1 last_T];
+Tpath{1} = [1 first_T second_T last_T];
 Tpath{2} = [1 first_T second_T last_T];
 Tpath{3} = [1 first_T second_T last_T];
 Tpath{4} = [1 first_T second_T last_T];
 
 % Radius of each segment
-Rpath{1} = [0 0 1.5 0 0];
-% Rpath{1} = [0 0 0 0];
+% Rpath{1} = [0 0 1.5 0 0];
+Rpath{1} = [0 0 0 0];
 Rpath{2} = [0 0 0 0];
 Rpath{3} = [0 0 0 0];
 Rpath{4} = [0 0 0 0];
 
 % Type of each segment
-path{1}  = {'linear', 'linear_before_turn', 'circular_left', 'linear_after_turn', 'linear'};
-% path{1}  = {'linear', 'linear', 'linear', 'linear'};
+% path{1}  = {'linear', 'linear_before_turn', 'circular_left', 'linear_after_turn', 'linear'};
+path{1}  = {'linear', 'linear', 'linear', 'linear'};
 path{2}  = {'linear', 'linear', 'linear', 'linear'};
 path{3}  = {'linear', 'linear', 'linear', 'linear'};
 path{4}  = {'linear', 'linear', 'linear', 'linear'};

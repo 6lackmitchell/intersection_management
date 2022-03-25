@@ -68,7 +68,7 @@ dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
 % data = trial_data(582); % Deadlock for nominal case
 % data = trial_data(137); % Infeasible for ff case
-data = trial_data(200); % Success for rv case
+data = trial_data(155); % Success for rv case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -186,6 +186,7 @@ hold off
 road_file = 'datastore/geometry/road_markings.mat';       
 load(road_file)
 
+filename = 'f'
 moviename = erase(filename,'.mat');
 cinematographer(dt,x(1:(ii),:,:),dyn_mode,obstacles,moviename)
 
