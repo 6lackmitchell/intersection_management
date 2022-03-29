@@ -17,14 +17,14 @@
 clc; clear; close all; restoredefaultpath;
 
 % Dynamics and Controller modes
-campaign       = "safe_reciprocal\turning";
+campaign       = "safe_reciprocal\straight";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 con_mode       = "ff_cbf";
 cbf_type       = "ff_cbf";
-pmetric        = "fcfs";
+pmetric        = "no_priority";
 cost_mode      = "costs";
 im_used        = 0;
-backup         = false;
+backup         = true;
 pcca           = false;
 input_bounds   = true;
 class_k_l0     = 10.0;
@@ -59,7 +59,7 @@ run(strcat('dynamics/',dyn_mode,'/initial_conditions.m'))
 u_params = load(strcat('./controllers/',con_mode,'/control_params.mat'));
 
 % Monte Carlo Parameters
-nTrials        = 100;
+nTrials        = 1000;
 nNon           = 2;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -119,7 +119,7 @@ save(filename)
 % 01.13.2022
 % to_load  = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat';
 % load(to_load);
-
+%%
 TTI     = Inf*ones(nTrials*nAgents,1);
 vvios   = zeros(nTrials,1);
 pvios   = zeros(nTrials,1);
@@ -145,8 +145,10 @@ success_rate  = sum(successes) / nTrials
 successes_idx = find(successes == 1);
 if isempty(successes_idx)
     average_time = 0
+    max_time = 0
 else
     average_time  = sum([trial_data(successes_idx).t]) / sum(successes)
+    max_time      = max([trial_data(successes_idx).t])
 end
 
 sortedTTI  = sort(TTI);

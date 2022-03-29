@@ -1,6 +1,10 @@
 clear;
 % filename = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_straight\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\nominal_cbf\no_priority\ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat'
-filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\';
+% filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\';
+% filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10_theone.mat');
+% filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\ff_cbf\no_priority\';
+% filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10_using_in_paper.mat');
+filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_straight\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\nominal_cbf\no_priority\';
 filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat');
 load(filename)
 
@@ -66,9 +70,9 @@ clf;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-% data = trial_data(582); % Deadlock for nominal case
+data = trial_data(582); % Deadlock for nominal case
 % data = trial_data(137); % Infeasible for ff case
-data = trial_data(9); % Success for rv case
+% data = trial_data(960); % Success for rv case
 code = data.code;
 t = data.t;
 dt = 0.01;

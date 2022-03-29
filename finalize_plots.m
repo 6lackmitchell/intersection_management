@@ -189,12 +189,11 @@ saveas(gcf,strcat(filepath,'infeasible_137.eps'),'epsc')
 clf; close all;
 timestepN  = 325;
 dtimestep  = 200;
-success    = 450;
-success    = 650;
+success    = 750;
 nAgents    = 4;
 
 filepath = 'C:\Users\DASC\Documents\git\intersection_management\datastore\intersection_crossing_turning\dynamic_bicycle_rdrive_1u\d_css\no_backup\input_constraints\no_pcca\rv_cbf\no_priority\';
-filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10.mat');
+filename = strcat(filepath,'ff_cbf_4MonteCarlo_N1000_Nnon0_K10_theone.mat');
 
 load(filename)
 x = trial_data(success).x;
@@ -370,7 +369,7 @@ saveas(gcf,strcat(filepath,'success_cbfs_650.eps'),'epsc')
 
 
 %% Safety Helper
-function [Ht,H0,LFH] = get_safety_values(x)
+function [Ht,H0] = get_safety_values(x)
 Na    = 4;
 tmax  = 5;
 
@@ -379,7 +378,7 @@ sw = 1.0;
 Nc  = factorial(Na-1);
 Ht  = zeros(Nc,1);
 H0  = zeros(Nc,1);
-LFH = zeros(Nc,1);
+% LFH = zeros(Nc,1);
 cc  = 1;
 ss  = 1;
 
@@ -421,7 +420,7 @@ for aa = 1:Na
         % h and hdot (= Lfh + Lgh*u)
         h0   = dx^2 + dy^2 - (2*sw)^2;
         h    = dx^2 + dy^2 + tau^2*(dvx^2 + dvy^2) + 2*tau*(dx*dvx + dy*dvy) - (2*sw)^2;
-        Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
+%         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
 
 
 %         % Robust-Virtual CBF
@@ -431,8 +430,8 @@ for aa = 1:Na
 
         % Robust-Virtual CBF
         a1    = 0.1;
-        tbar  = 0.5;
-        tbar  = 1.0;
+        tbar = 0.5;
+%         tbar  = 1.0;
         kh0   = 1;
         k2    = max([tau-tbar,eps]);
         H     = h   + a1*k2*h0;
@@ -440,7 +439,7 @@ for aa = 1:Na
         % Inequalities: Ax <= b
         hw(dd)          = H;
         hw0(dd)         = h0;
-        Lfhw(dd)        = Lfh;
+%         Lfhw(dd)        = Lfh;
 
         dd = dd + 1;
         ss = ss + 1;
@@ -449,7 +448,7 @@ for aa = 1:Na
 
     Ht(cc:cc+(nc-1))  = hw;
     H0(cc:cc+(nc-1))  = hw0;
-    LFH(cc:cc+(nc-1)) = Lfhw;
+%     LFH(cc:cc+(nc-1)) = Lfhw;
 
     cc = cc + nc;
     

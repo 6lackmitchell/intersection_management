@@ -202,17 +202,17 @@ for aa = 1:Na
     end
 
     if exitflag ~= 2
-        if t ~= 0.01
-            beep
-            sol = [-9.81*ones(4,1); zeros(4,1)];
-        else
+%         if t ~= 0.01
+%             beep
+%             sol = [-9.81*ones(4,1); zeros(4,1)];
+%         else
             disp(t);
             disp(exitflag);
             disp(aa)
             disp('Error');
             data = struct('code',exitflag);
             return
-        end
+%         end
          
     end
            

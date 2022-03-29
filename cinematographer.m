@@ -13,7 +13,7 @@ maxYdim = 25;
 % Plotting params
 theta = 0:2*pi/101:2*pi;
 RR    = 0.6;
-RR    = 2.0; % This corresponds to a physical radius of 1 = RR/2
+RR    = 1.6; % This corresponds to a physical radius of 1 = RR/2
 
 % Physical Params
 L = 0.85;
@@ -83,6 +83,8 @@ for ii=1:1:nAgents
     
     plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
     plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    quiver(cx1,cy1,(1+x(1,ii,4))*cos(x(1,ii,3)+x(1,ii,5)),(1+x(1,ii,4))*sin(x(1,ii,3)+x(1,ii,5)),'LineWidth',3)
+
 
 end
 txt = strcat('t = ',num2str(0.0),' sec');
@@ -103,7 +105,7 @@ end
 
 % If the movie is going too slow, you can increase the "stride" value, e.g.
 %   put "for j = 1:10:maxsteps" or some other number in the middle.
-for tt=1:(1/(50*dt)):maxsteps
+for tt=1:(1/(100*dt)):maxsteps
 % for tt=(maxsteps-100):(1/(50*dt)):maxsteps
 
     clf
@@ -147,7 +149,7 @@ for tt=1:(1/(50*dt)):maxsteps
 
         plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
         plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
-        quiver(cx1,cy1,(1+x(tt,ii,4))*cos(x(tt,ii,3)+x(tt,ii,5)),(1+x(tt,ii,4))*sin(x(tt,ii,3)+x(tt,ii,5)))
+        quiver(cx1,cy1,(1+x(tt,ii,4))*cos(x(tt,ii,3)+x(tt,ii,5)),(1+x(tt,ii,4))*sin(x(tt,ii,3)+x(tt,ii,5)),'LineWidth',3)
 
     %     plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
 
