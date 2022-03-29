@@ -19,7 +19,7 @@ In the video below, a relaxed version of the future focused control barrier func
 https://user-images.githubusercontent.com/67293038/160519126-8371cca7-fa74-42d0-a05b-4b33eeb01599.mp4
 
 The above videos may be viewed on YouTube here:
-https://youtu.be/dgMUDRlxLOg
-https://youtu.be/sVao3ALdDQg
+https://youtu.be/dgMUDRlxLOg \\
+https://youtu.be/sVao3ALdDQg \\
 https://youtu.be/pIRh8zLnUHo
 
