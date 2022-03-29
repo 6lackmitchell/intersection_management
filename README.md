@@ -9,7 +9,7 @@ In the video below, a relative-degree two exponential CBF with no predictive pow
 https://user-images.githubusercontent.com/67293038/160519184-f2041312-2d1e-4252-82ef-77b108c758c1.mp4
 
 ### Future-Focused CBF QP Control
-In the video below, a future focused CBF (ff-CBF) is used to perform centralized, quadratic program (QP) based control. Due to the ff-CBF construction, the QP becomes infeasible during virtual barrier violation despite wide physical margin between vehicles.
+In the video below, a future focused CBF (ff-CBF) is used to perform centralized, quadratic program (QP) based control. Due to the ff-CBF construction, the QP becomes infeasible during virtual barrier violation despite wide physical margin between vehicles, and thus the simulation terminates.
 
 https://user-images.githubusercontent.com/67293038/160519172-8eba91d1-20bf-4f4e-81ff-b823d39b502e.mp4
 
