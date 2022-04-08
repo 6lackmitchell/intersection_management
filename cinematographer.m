@@ -23,30 +23,23 @@ L = 0.0;
 % Make the movie object
 mov = struct('cdata', [], 'colormap', []);
 
-vidObj = VideoWriter(filename, 'MPEG-4');
+% vidObj = VideoWriter(filename, 'MPEG-4'); % Does not work on Ubuntu
+vidObj = VideoWriter(strcat(filename,'.avi')); % Works on Ubuntu
 
 % Frame rate. Keep this at 24 if you don't care.
 FR = 30;
 vidObj.FrameRate = FR;
 open(vidObj)
 
-% Specify images
-I1         = imread('images/car1.png');
-marker{1}  = I1;
-I2         = imread('images/car2.png');
-marker{2}  = imrotate(I2,pi);
-I3         = imread('images/car3.png');
-marker{3}  = imrotate(I3,-pi/2);
-markersize = [1,1]; % The size of marker is expressed in axis units, NOT in pixels
-
-figure(1);
-clf
+figure(100);
 
 % The first two numbers in the "position" matrix are the (x,y) position of the lower
 % left corner of the plot window. The last two numbers are the (x,y) position
 % of the upper right corner.
 position = [100 50 700 700];
 set(gcf, 'Position', position)
+
+ax = gca();
 
 hold on
 for oo = 1:length(obstacles)
@@ -81,21 +74,28 @@ for ii=1:1:nAgents
         oy2  = [oy2a oy2b];
     end
     
-    plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
-    plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+    pp(ii) = plot(ax,ox1,oy1,'Color',color(ii),'Linewidth',lw);
+
+%     plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+%     plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
 
 end
+set(0,'CurrentFigure',100);
+set(ax, 'XLimMode', 'manual', 'YLimMode', 'manual');
 txt = strcat('t = ',num2str(0.0),' sec');
 text(10,10,txt,'FontSize',14)
 axis([-maxXdim maxXdim -maxYdim maxYdim]);
 % hold off
 drawnow update
+
+% ax = gca();
 mov= getframe(gcf);
 
 % The next few lines make the first frame of the movie play for 2 seconds
 first_frame_pause_secs = 1;
 for k=1:1:first_frame_pause_secs*FR
     writeVideo(vidObj,mov)
+%     writeVideo(vidObj,getframe(ax))
 end
 
 % This main loop draws the plots for each remaining time step and saves
@@ -106,12 +106,13 @@ end
 for tt=1:(1/(50*dt)):maxsteps
 % for tt=(maxsteps-100):(1/(50*dt)):maxsteps
 
-    clf
+%     clf
 %     set(gcf, 'Position', position)
-    hold on
-    for oo = 1:length(obstacles)
-        plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
-    end
+%     hold on
+%     for oo = 1:length(obstacles)
+%         plot(obstacles(oo).x,obstacles(oo).y,'Color',obstacles(oo).color,'Linewidth',lw+2)
+%     end
+    set(0,'CurrentFigure',100);
     for ii=1:1:nAgents
         if strcmp(dyn_mode,'double_integrator')
             th = atan2(x(1,ii,4),x(1,ii,3));
@@ -144,14 +145,16 @@ for tt=1:(1/(50*dt)):maxsteps
             oy2  = [oy2a oy2b];
         end
 
-
-        plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
-        plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+%         pp(ii) = plot(ax,ox1,oy1,'Color',color(ii),'Linewidth',lw);
+        set(pp(ii),'XData',ox1,'YData',oy1);
+%         plot(ox1, oy1,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
+%         plot(ox2, oy2,'Color',color(ii),'Linewidth',lw)%,'MarkerSize',mksz);
 
     %     plot(x(tt,ii,1), x(tt,ii,2),'o','Color',color(ii),'Linewidth',lw,'MarkerSize',mksz);
 
     end
     txt = strcat('t = ',num2str(round(tt * dt,2)),' sec');
+    delete(findobj(gca,'Type','Text'))
     text(10,10,txt,'FontSize',14)
     axis([-maxXdim maxXdim -maxYdim maxYdim]);
 

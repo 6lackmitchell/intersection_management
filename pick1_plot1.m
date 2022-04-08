@@ -1,14 +1,14 @@
-find(infeas==1)
-find(pvios>0)
-find(successes==0)
-find(dlock>0)
+% find(infeas==1)
+% find(pvios>0)
+% find(successes==0)
+% find(dlock>0)
 
-clf;
+close all;
 
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(972); % Deadlock for nominal case
+data = trial_data(2); % Deadlock for nominal case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -126,6 +126,7 @@ hold off
 road_file = 'datastore/geometry/road_markings.mat';       
 load(road_file)
 
+filename = "something"
 moviename = erase(filename,'.mat');
 cinematographer(dt,x(1:(ii),:,:),dyn_mode,obstacles,moviename)
 
