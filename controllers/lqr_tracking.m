@@ -1,4 +1,4 @@
-function u = lqr_tracking(t,x,aa,settings)
+function [u,reached] = lqr_tracking(t,x,aa)
 %lqr_tracking - Trajectory tracking controller using LQR.
 % This controller tracks a time-varying reference trajectory by redefining
 % the goal state at each point in time.
@@ -26,15 +26,24 @@ function u = lqr_tracking(t,x,aa,settings)
 % Jan 2022; Last revision: 31-Jan-2022
 %------------- BEGIN CODE --------------% 
 
+% LQR X
+xlqr = [x(1); x(2); x(4)*cos(x(3)); x(4)*sin(x(3))];
 
-% Compute state error
-xd     = settings.r(aa,1);
-yd     = settings.r(aa,2);
-xdotd  = settings.rdot(aa,1);
-ydotd  = settings.rdot(aa,2);
 
-xdes   = [xd; yd; xdotd; ydotd];
-xerr   = x' - xdes;
+% Compute desired position
+[xd,yd,Q,reached] = get_desired_position(t,x,aa);
+
+% Compute desired velocity
+perr   = x(1:2)' - [xd;yd];
+Av = zeros(2);
+Bv = eye(2);
+Qv = eye(2);
+Rv = eye(2);
+[Kv,~,~] = lqr(Av,Bv,Qv,Rv);
+vd = -Kv*perr;
+
+xdes   = [xd; yd; vd];
+xerr   = xlqr - xdes;
 
 % Double Integrator dynamics
 A = [0 0 1 0;
@@ -47,25 +56,36 @@ B = [0 0;
      0 1];
 
 % LQR Cost Function: x'*Q*x + u'*R*u
-xy_gain = 50;
-dot_gain = 10;
-Q = eye(size(A,1));
+xy_gain    = 2;
 Q(1:2,1:2) = xy_gain*Q(1:2,1:2);
-Q(3:4,3:4) = dot_gain*Q(3:4,3:4);
 R = eye(size(B,2));
 
 % Compute LQR gain
-[K,S,e] = lqr(A,B,Q,R);
+[K,~,~] = lqr(A,B,Q,R);
 
 % Compute optimal control
-u = -K*xerr;
+u = axay_to_wa(-K*xerr,x);
 u = round(u,6);
 
 end
 
-function [newx_coord,newy_coord] = rotate(matrix,vector)
-    z          = vector*matrix;
-    newx_coord = z(1);
-    newy_coord = z(2);
+function [unew] = axay_to_wa(u,x)
+
+if abs(x(4)) > 0.1
+    S = [-x(4)*sin(x(3))*sec(x(5))^2 cos(x(3))-sin(x(3))*tan(x(5)); ...
+          x(4)*cos(x(3))*sec(x(5))^2 sin(x(3))+cos(x(3))*tan(x(5))];
+
+    phidot = x(4)*tan(x(5));
+    xdot   = x(4)*(cos(x(3))-sin(x(3))*tan(x(5)));
+    ydot   = x(4)*(sin(x(3))+cos(x(3))*tan(x(5)));
+
+    d = [u(1) + ydot*phidot; u(2) - xdot*phidot];
+
+    unew = S\d;
+
+else
+    unew = [0; sqrt(u(1)^2+u(2)^2)];
+
 end
 
+end

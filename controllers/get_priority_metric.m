@@ -69,6 +69,11 @@ switch settings.metric
         LF = 1/2*sum(settings.Lgh.^2);
         [~,idxLF] = sort(LF,'descend');
 
+    case 'LowProximity'
+        % Low proximity to center of intersection gets high priority
+        LF = 1/2*vecnorm(x(:,1:2)').^2;
+        [~,idxLF] = sort(LF,'descend');
+
         % Not using these right now
 %     case 'HighEffortScaled'
 %         % High Required (scaled) Effort for safe control gets High Priority
