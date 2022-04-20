@@ -22,7 +22,7 @@ run('settings/simulation_setup.m') % Edit this file to change simulation setup
 %% Initialize Simulation Parameters
 
 % Monte Carlo Parameters
-nTrials        = 2;
+nTrials        = 3;
 nNon           = 0;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
@@ -57,6 +57,7 @@ for nn = 1:nTrials
     settings.im_used     = im_used;
     settings.Lr          = Lr;
     settings.SL          = SL;
+    settings.umax        = umax;
     settings.nNon        = nNon;
     settings.pcca        = pcca;
     settings.pmetric     = pmetric;

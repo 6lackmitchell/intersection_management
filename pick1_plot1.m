@@ -1,14 +1,14 @@
-% find(infeas==1)
-% find(pvios>0)
-% find(successes==0)
-% find(dlock>0)
+find(infeas==1)
+find(pvios>0)
+find(successes==0)
+find(dlock>0)
 
 close all;
 
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(2); % Deadlock for nominal case
+data = trial_data(1); % Deadlock for nominal case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -32,10 +32,10 @@ figure(2);
 title('Control Inputs X')
 hold on
 for jj = 1:nAgents
-    if jj == 3
+%     if jj == 3
     plot(tt,u(1:ii,jj,1),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,1),'LineWidth',lw)
-    end
+%     end
 %     plot(tt,atan(uNom(1:ii,jj,1)),'LineWidth',lw)
 end
 legend('u_{11}','\mu_{11}','u_{21}','\mu_{21}','u_{31}','\mu_{31}','u_{41}','\mu_{41}')
@@ -45,10 +45,10 @@ figure(3);
 title('Control Inputs Y')
 hold on
 for jj = 1:nAgents
-    if jj == 3
+%     if jj == 3
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
     plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
-    end
+%     end
 %     plot(tt,uNom(1:ii,jj,2),':','LineWidth',lw)
 end
 legend('u_{12}','\mu_{12}','u_{22}','\mu_{22}','u_{32}','\mu_{32}','u_{42}','\mu_{42}')

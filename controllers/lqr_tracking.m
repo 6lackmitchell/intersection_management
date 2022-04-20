@@ -1,4 +1,4 @@
-function [u,reached] = lqr_tracking(t,x,aa)
+function [u,reached] = lqr_tracking(t,x,aa,umax)
 %lqr_tracking - Trajectory tracking controller using LQR.
 % This controller tracks a time-varying reference trajectory by redefining
 % the goal state at each point in time.
@@ -28,7 +28,6 @@ function [u,reached] = lqr_tracking(t,x,aa)
 
 % LQR X
 xlqr = [x(1); x(2); x(4)*cos(x(3)); x(4)*sin(x(3))];
-
 
 % Compute desired position
 [xd,yd,Q,reached] = get_desired_position(t,x,aa);
@@ -64,12 +63,12 @@ R = eye(size(B,2));
 [K,~,~] = lqr(A,B,Q,R);
 
 % Compute optimal control
-u = axay_to_wa(-K*xerr,x);
+u = axay_to_wa(-K*xerr,x,umax);
 u = round(u,6);
 
 end
 
-function [unew] = axay_to_wa(u,x)
+function [unew] = axay_to_wa(u,x,umax)
 
 if abs(x(4)) > 0.1
     S = [-x(4)*sin(x(3))*sec(x(5))^2 cos(x(3))-sin(x(3))*tan(x(5)); ...
@@ -87,5 +86,8 @@ else
     unew = [0; sqrt(u(1)^2+u(2)^2)];
 
 end
+
+unew(1) = max([min([umax(1),unew(1)]),-umax(1)]);
+unew(2) = max([min([umax(2),unew(2)]),-umax(2)]);
 
 end

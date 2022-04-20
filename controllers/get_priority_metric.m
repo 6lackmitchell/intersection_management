@@ -27,7 +27,13 @@ switch settings.metric
         idxLF = 1:1:settings.Na;
         LF    = ones(settings.Na,1);
 
-    case 'FCFS'
+    case 'high_proximity'
+        % High Proximity to Intersection Center gets High Priority
+        LF = 1/2*vecnorm(x(:,1:2)').^2;
+        [~,idxLF] = sort(LF,'descend');
+        [LF,~]    = sort(LF,'ascend');
+
+    case 'fcfs'
         % First Come First Served
         if t > settings.dt
             % Static priority, nothing changes after first assignment
@@ -37,6 +43,7 @@ switch settings.metric
         
         LF = 1/2*vecnorm(x(:,1:2)').^2;
         [~,idxLF] = sort(LF,'descend');
+        [LF,~]    = sort(LF,'ascend');
 
     case 'FCFS_V'
         % First Come First Served
@@ -59,19 +66,15 @@ switch settings.metric
         LF = 1/2*vecnorm(settings.xdes' - x(:,1:2)').^2 + 1/2*vecnorm(settings.xdesdot' - settings.xdot').^2;
         [~,idxLF] = sort(LF,'descend');
 
-    case 'HighEffort'
+    case 'high_energy'
         % High Required Effort for safe control gets High Priority
         LF = 1/2*sum(settings.Lgh.^2);
         [~,idxLF] = sort(LF,'ascend');
+        [LF,~]    = sort(LF,'descend');
 
-    case 'LowEffort'
+    case 'low_energy'
         % Low Required Effort for safe control gets High Priority
         LF = 1/2*sum(settings.Lgh.^2);
-        [~,idxLF] = sort(LF,'descend');
-
-    case 'LowProximity'
-        % Low proximity to center of intersection gets high priority
-        LF = 1/2*vecnorm(x(:,1:2)').^2;
         [~,idxLF] = sort(LF,'descend');
 
         % Not using these right now
@@ -87,10 +90,8 @@ switch settings.metric
 end
 
 priority = zeros(settings.Na,1);
-for aa = 1:settings.Na
-%     priority(idxLF(aa)) = settings.power^(aa-1);
-    priority(idxLF(aa)) = settings.power*LF(aa)^2/(sum(LF.^2));
-end
+p = settings.power*LF.^2/(sum(LF.^2));
+priority(idxLF) = p;
 
 
 end

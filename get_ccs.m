@@ -35,7 +35,7 @@ end
 
 [A4,b4,h4,h04] = get_collision_avoidance_constraints(t,x,settings);
 
-row_idx = nAScons*aa + (1:nIAcons);
+row_idx = nAScons*Na + (1:nIAcons);
 
 A(row_idx,:) = A4;
 b(row_idx)   = b4;

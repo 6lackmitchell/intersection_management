@@ -15,11 +15,11 @@ im_used        = 0;
 
 if all_identical
     con_nom    = 'lqr_tracking';           
-    con_mode   = 'centralized_cbf_qp';
+    con_mode   = 'decentralized_cbf_qp';
     cbf_type   = 'ff_cbf';
-    pmetric    = 'FCFS';
+    pmetric    = 'high_proximity';
     pcca       = false;
-    classK_l0  = 10.0;
+    classK_l0  = 1.0;
     ppower     = 2;
 
     con_nom    = repmat({con_nom},   1, nAgents);

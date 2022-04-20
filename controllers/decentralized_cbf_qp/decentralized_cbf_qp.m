@@ -1,7 +1,7 @@
-function [data] = centralized_cbf_qp(t,x,aa,unom,settings,params)
-%centralized_cbf_qp - QP-based law for safe, centralized control
+function [data] = decentralized_cbf_qp(t,x,aa,unom,settings,params)
+%decentralized_cbf_qp - QP-based law for safe, decentralized control
 %
-% Syntax:  [data] = centralized_cbf_qp(t,x,unom)
+% Syntax:  [data] = decentralized_cbf_qp(t,x,unom)
 %
 % Inputs:
 %    t:        current time in sec -- float
@@ -32,27 +32,29 @@ function [data] = centralized_cbf_qp(t,x,aa,unom,settings,params)
 % Email: mblackjr@umich.edu
 % Website: http://www.blackmitchell.com
 %------------- BEGIN CODE --------------
-Na = size(x,1);
-Nu = settings.Nu;
+Na   = size(x,1);
+Nu   = settings.Nu;
 umax = settings.umax;
 
 % Generate Safety Settings
-safety_settings.Na        = Na;
-safety_settings.uNom      = unom;
-safety_settings.SL        = settings.SL;
-safety_settings.Lr        = settings.Lr;
-safety_settings.pcca      = settings.pcca;
-safety_settings.classk    = settings.classk;
-safety_settings.backup    = settings.backup;
-safety_settings.cbf_type  = settings.cbf_type;
-safety_settings.lookahead = settings.lookahead;
+safety_settings.Na         = Na;
+safety_settings.uNom       = unom;
+safety_settings.aa         = settings.aa;
+safety_settings.SL         = settings.SL;
+safety_settings.Lr         = settings.Lr;
+safety_settings.pcca       = settings.pcca;
+safety_settings.classk     = settings.classk;
+safety_settings.backup     = settings.backup;
+safety_settings.cbf_type   = settings.cbf_type;
+safety_settings.lookahead  = settings.lookahead;
+safety_settings.hysteresis = settings.hysteresis;
 
 % Get all safety constraints
-[As,bs,hs,h0] = get_ccs(t,x,safety_settings);
+[As,bs,hs,h0,hysteresis] = get_scs(t,x,safety_settings);
 
 % Check for safety violations
-ia_virt_cbf     = hs(end-(factorial(Na-1)-1):end);
-ia_phys_cbf     = h0(end-(factorial(Na-1)-1):end);
+ia_virt_cbf     = hs(end-(Na-1)-1:end);
+ia_phys_cbf     = h0(end-(Na-1)-1:end);
 virt_violations = sum(find(ia_virt_cbf < 0));
 phys_violations = sum(find(ia_phys_cbf < 0));
 
@@ -67,8 +69,8 @@ end
 % Compute values for priority metrics
 xdot     = x(:,4).*(cos(x(:,3)) - sin(x(:,3)).*tan(x(:,5)));
 ydot     = x(:,4).*(sin(x(:,3)) + cos(x(:,3)).*tan(x(:,5)));
-h_metric = hs(end-(factorial(Na-1)-1):end);
-Lgh      = As(end-(factorial(Na-1)-1):end,1:Na);
+h_metric = hs(end-(Na-1)-1:end);
+Lgh      = As(end-(Na-1)-1:end,:);
 
 % Generate Priority Settings
 metric_settings.Na     = Na;
@@ -86,20 +88,20 @@ prior    = priority;
 
 % Generate cost function matrix Q and vector p: 
 % J = 1/2*x^T*q*x + p*x
-q = [repmat(params.qu(2),Na,1)];
-cost_settings = struct('Nu',    Na*(Nu-1), ...
+q = params.qu(2);
+cost_settings = struct('Nu',    Nu-1, ...
                        'Na',    Na,        ...
                        'q',     q,         ...
                        'k',     priority);
-[Q,p] = priority_cost(unom(:,2),cost_settings);
+[Q,p] = priority_cost(unom(settings.aa,2),cost_settings);
 
 % Impose input bounds (or very high bounds for "no")
 if settings.ubounds
-    LB    = [-repmat(umax(2),Na,1)];
-    UB    = [ repmat(umax(2),Na,1)];
+    LB    = [-umax(2)];
+    UB    = [ umax(2)];
 else
-    LB    = [-10*umax(2)*ones(Na,1)];
-    UB    = [ 10*umax(2)*ones(Na,1)];
+    LB    = [-10*umax(2)];
+    UB    = [ 10*umax(2)];
 end
 
 % Solve Optimization problem
@@ -123,7 +125,7 @@ if exitflag ~= 2
 end
 
 % Set control and cbf
-u   = [unom(aa,1); sol(aa)];
+u   = [unom(aa,1); sol];
 cbf = min([hs; 100]);
 
 % Formulate data structure to return
@@ -134,6 +136,7 @@ data.cbf   = cbf;
 data.prior = prior;
 data.v_vio = virt_violations;
 data.p_vio = phys_violations;
+data.hysteresis = hysteresis;
 
 end
 %------------- END OF CODE --------------

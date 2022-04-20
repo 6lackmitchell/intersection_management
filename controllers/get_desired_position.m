@@ -20,14 +20,16 @@ goal_turn = [-lw lw/2; -lw/2 -lw; -lw lw/2;lw -lw/2];
 threshold = 0.5;
 gain      = 0.01;
 
+if norm(x(1:2)) < lw
+    gain = 10;
+end
+
 
 if aa <= Nturning
-%     k    = 2;
     
     if x(2) < 0
         xd = xd0(aa);
     elseif x(2) < 1
-        gain = 20;
         xd = xd0(aa) - x(2);
     else
         xd = xdf_turn(aa);

@@ -10,6 +10,7 @@ dt         = t_params.dt;
 % Unpack misc params
 x0_og      = misc_params.x0;
 x0         = misc_params.x0i;
+umax       = misc_params.umax;
 nNon       = misc_params.nNon;
 nControls  = misc_params.nControls;
 im_used    = misc_params.im_used;
@@ -32,6 +33,7 @@ sols       = zeros(nTimesteps,nAgents,nAgents);
 priority   = zeros(nTimesteps,nAgents,nAgents);
 violations = zeros(nTimesteps,nAgents,2);
 vio_mag    = zeros(nTimesteps,1);
+hysteresis = zeros(nAgents,1);
 exited     = zeros(nAgents,1);
 x(1,:,:)   = x0;
 
@@ -44,6 +46,7 @@ unom = zeros(nAgents,nControls);
 
 % Define settings structure for controllers
 settings.lookahead = 5.0;
+settings.umax      = umax;
 settings.ubounds   = ubounds;
 settings.backup    = backup;
 settings.wHat      = wHat;
@@ -58,11 +61,11 @@ while ii <= nTimesteps
 
     % Update time and state
     t   = ii *  dt;
-    xx  = squeeze(x(ii,:,:));
+    xx  = squeeze(x(ii,:,:));    
 
     % Get nominal inputs
     for aa = 1:nAgents
-        [unom(aa,:),reached] = nominal_u{aa}(t,xx(aa,:),aa);
+        [unom(aa,:),reached] = nominal_u{aa}(t,xx(aa,:),aa,umax);
         exited(aa) = exited(aa) + reached*(exited(aa)==0);
     end
 
@@ -75,12 +78,14 @@ while ii <= nTimesteps
     for aa = 1:nAgents
 
         % Configure required settings
+        settings.aa       = aa;
         settings.cbf_type = cbf_type{aa};
         settings.pcca     = pcca{aa};
         settings.pmetric  = pmetric{aa};
         settings.classk   = classk{aa};
         settings.ppower   = ppower{aa};
         settings.prior    = priority(ii,:);
+        settings.hysteresis = hysteresis(aa);
 
         % Modify unom if necessary
         if nNon > 0
@@ -112,6 +117,7 @@ while ii <= nTimesteps
             u0(ii,aa,:)         = unom(aa,:);
             priority(ii,aa,:)   = data.prior;
             violations(ii,aa,:) = [data.v_vio; data.p_vio]';
+            hysteresis(aa)      = data.hysteresis;
         elseif t == dt
             [x0_new]  = randomize_ic(x0_og,func2str(dynamics));
             x(ii,:,:) = x0_new;
@@ -126,6 +132,10 @@ while ii <= nTimesteps
         else
             data.code = 0;
             breakout = true;
+        end
+
+        if continueon || breakout
+            break
         end
     end
 
