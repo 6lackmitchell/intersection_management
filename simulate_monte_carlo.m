@@ -22,8 +22,8 @@ run('settings/simulation_setup.m') % Edit this file to change simulation setup
 %% Initialize Simulation Parameters
 
 % Monte Carlo Parameters
-nTrials        = 3;
-nNon           = 0;
+nTrials        = 5;
+nNon           = 1;
 trial_data     = repmat(data_content(nTimesteps,nAgents,nStates),nTrials,1);
 time_through_intersection = zeros(nTrials,nAgents);
 
@@ -36,8 +36,8 @@ safety = zeros(nTrials,nTimesteps,nAgents);
 
 %% Execute Monte Carlo Simulation
 tic
-% parfor nn = 1:nTrials
-for nn = 1:nTrials
+parfor nn = 1:nTrials
+% for nn = 1:nTrials
 
     % Randomize initial conditions
     [x0_new,Tpath_new]  = randomize_ic(x0,Tpath,dyn_mode);
@@ -158,6 +158,8 @@ ret = struct('success', 0,                                 ...
              'sols',    zeros(nTimesteps,nAgents,nAgents*2+factorial(nAgents-1)),...
              'vios',    zeros(nTimesteps,nAgents,2),       ...
              'vmags',   zeros(nTimesteps,1),               ...
+             'barrier', zeros(nTimesteps,1),               ...
+             'alpha',   zeros(nTimesteps,nAgents),         ...
              'x',       zeros(nTimesteps,nAgents,nStates), ...  
              'u',       zeros(nTimesteps,nAgents,2),       ...
              'u0',      zeros(nTimesteps,nAgents,2),       ...

@@ -1,14 +1,15 @@
-function [A,b,h,h0,hysteresis] = get_scs(t,x,settings)
+function [A,b,h,h0,hysteresis,prop_brake] = get_scs(t,x,settings)
 %get_scs -- Get Solo Constraint Set
 
 % Constraint parameters
 Nu      = 1;
+Ns      = 1;
 Na      = settings.Na;
 aa      = settings.aa;
 nAScons = 2; % Number of agent-specific constraints
 nIAcons = Na-1; % Number of interagent constraints
 nRows   = nAScons+nIAcons;
-nCols   = Nu;
+nCols   = Nu + Ns;
 
 % Constraint matrix/vector: Ax <= b, and CBF h
 A  = zeros(nRows,nCols);
@@ -17,7 +18,7 @@ h  = zeros(nRows,1);
 h0 = zeros(nRows,1);
 
 % Speed constraints
-[A1,b1,h1]   = get_speed_constraints(t,x,aa,settings.SL);
+[A1,b1,h1]   = get_speed_constraints(t,x,settings);
 
 % Specify row and column index for agent
 row_idx = 1:nAScons;
@@ -29,7 +30,7 @@ h(row_idx)   = h1;
 h0(row_idx)  = h1;
 
 % Interagent safety constraints
-[A4,b4,h4,h04,hysteresis] = get_collision_avoidance_constraints(t,x,settings);
+[A4,b4,h4,h04,hysteresis,prop_brake] = get_collision_avoidance_constraints(t,x,settings);
 
 row_idx      = nAScons + (1:nIAcons);
 A(row_idx,:) = A4;
@@ -39,7 +40,10 @@ h0(row_idx)  = h04;
 
 end
 
-function [A,b,h] = get_speed_constraints(t,x,aa,SL)
+function [A,b,h] = get_speed_constraints(t,x,settings)
+SL = settings.SL;
+aa = settings.aa;
+
 kf   = 10; % Class K gain
 hf   = SL - x(aa,4);
 Lfhf = 0;
@@ -48,8 +52,7 @@ Lghf = -1;
 kr   = kf;
 Lfhr = 0;
 
-backup = 1;
-if backup
+if settings.backup
     % Reverse allowed
     hr   = 100;
     Lghr = 0;
@@ -59,7 +62,8 @@ else
     Lghr = 1;
 end
 
-A = [-Lghf; -Lghr];
+A = [-Lghf -1; -Lghr 0];
+% A = [-Lghf; -Lghr];
 b = [Lfhf + kf*hf; Lfhr + kr*hr];
 
 A = round(A,12);
@@ -68,12 +72,12 @@ h = [hf; hr];
 
 end
 
-function [A,b,Ht,H0,hysteresis] = get_collision_avoidance_constraints(t,x,settings)
+function [A,b,Ht,H0,hysteresis,prop_brake] = get_collision_avoidance_constraints(t,x,settings)
 % Hard values
 aa = settings.aa;
 Lr = settings.Lr;
 sw = 1.0;
-Nu = 1;
+Ns = 1;
 
 % Unpack settings
 Na     = settings.Na;
@@ -85,7 +89,7 @@ betadot = uNom(:,1);
 
 % Constraint setup
 nCons = Na-1;
-A     = zeros(nCons,1);
+A     = zeros(nCons,1+Ns);
 b     = zeros(nCons,1);
 Ht    = zeros(nCons,1);
 H0    = zeros(nCons,1);
@@ -93,8 +97,10 @@ H0    = zeros(nCons,1);
 % Switching arrays
 LB = -inf*ones(nCons+1,1);
 UB =  inf*ones(nCons+1,1);
+prop_brake = false;
 
-cc    = 1;
+cc       = 1;
+tau_vals = zeros(nCons,1);
 
 % Loop through every agent for complete constraint set
 for ii = 1:Na
@@ -165,7 +171,7 @@ for ii = 1:Na
    
     if strcmp(settings.cbf_type,'nominal_cbf')
         % Nominal CBF (Rel-Deg 2)
-        l0  = 2;
+%         l0  = 2;
         H   = h0;
         LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
         LgH = 2*(dx*dax_con + dy*day_con);
@@ -184,6 +190,33 @@ for ii = 1:Na
         H     = h   + a1*max([tau-1,eps])*h0^(1/kh0);
         LfH   = Lfh + a1*(max([tau-1,eps])*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
         LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
+
+    elseif strcmp(settings.cbf_type,'road_rules')
+        vv = xi(1:2)-xa(1:2);
+        theta = wrapToPi(atan2(vv(2),vv(1)));
+        
+        if theta >= 0 && theta <= pi/2
+%             % Future Focused CBF
+%             H   = h;
+%             LfH = Lfh;
+%             LgH = Lgh;
+
+            % Nominal CBF (Rel-Deg 2)
+%             l0  = 10;
+            H   = h0;
+            LfH = l1*Lfh0 + 2*(dvx^2 + dvy^2) + 2*(dx*dax_unc + dy*day_unc);
+            LgH = 2*(dx*dax_con + dy*day_con);
+        else
+            H   = 100;
+            LfH = 0;
+            LgH = 0;
+        end
+
+    elseif strcmp(settings.cbf_type,'proportional_braking')
+        prop_brake = true;
+        H   = 100;
+        LfH = 0;
+        LgH = 0;
         
     end
 
@@ -201,33 +234,38 @@ for ii = 1:Na
     end
 
     % Inequalities: Ax <= b
-    A(cc)  = -LgH;
+    A(cc,:)  = [-LgH 0];
+%     A(cc)  = -LgH;
     b(cc)  = LfH + l0*H; 
     Ht(cc) = H;
     H0(cc) = h0;
 
+    tau_vals(cc) = tau;
     cc = cc + 1;
     
 end
 
 % Copy settings and use nominal cbf
 cpy_settings = settings;
-cpy_settings.cbf_type = 'nominal_cbf';
+% cpy_settings.cbf_type = 'nominal_cbf';
+% cpy_settings.cbf_type = 'road_rules';
+cpy_settings.cbf_type = 'proportional_braking';
+
 
 % Switching settings
-delta  = 0.5;
-kdelta = 4;
+delta  = 0.25;
+kdelta = 2;
 
 sb_1 = min(UB) - max(LB);
 sb_2 = min(Ht);
 switching_barrier_function = min([sb_1,sb_2]);
 
 % Check whether switching is necessary
-if switching_barrier_function < kdelta*delta && settings.hysteresis && strcmp(settings.cbf_type,'ff_cbf')
-    [A,b,Ht,H0,~] = get_collision_avoidance_constraints(t,x,cpy_settings);
+if switching_barrier_function < kdelta*delta && settings.hysteresis && strcmp(settings.cbf_type,'ff_cbf') && min(tau_vals) < 2
+    [A,b,Ht,H0,~,prop_brake] = get_collision_avoidance_constraints(t,x,cpy_settings);
     hysteresis = 1;
 elseif switching_barrier_function < delta && strcmp(settings.cbf_type,'ff_cbf')
-    [A,b,Ht,H0,~] = get_collision_avoidance_constraints(t,x,cpy_settings);
+    [A,b,Ht,H0,~,prop_brake] = get_collision_avoidance_constraints(t,x,cpy_settings);
     hysteresis = 1;
 else
     hysteresis = 0;

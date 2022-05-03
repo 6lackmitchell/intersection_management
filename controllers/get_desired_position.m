@@ -5,7 +5,7 @@ function [xd,yd,G,reached] = get_desired_position(t,x,aa)
 % Globally relevant details here
 lw       = 3;
 L        = 50;
-Nturning = 1;
+Nturning = 0;
 reached  = 0;
 
 % Variables specific to intersection setup
@@ -18,7 +18,7 @@ xdf_turn  = [-L;   -lw/2; -L; L];
 ydf_turn  = [lw/2; -L; lw/2; -lw/2];
 goal_turn = [-lw lw/2; -lw/2 -lw; -lw lw/2;lw -lw/2];
 threshold = 0.5;
-gain      = 0.01;
+gain      = 0.1;
 
 if norm(x(1:2)) < lw
     gain = 10;

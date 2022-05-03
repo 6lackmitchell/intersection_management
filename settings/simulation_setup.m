@@ -10,17 +10,17 @@ campaign       = "testing";
 dyn_mode       = "dynamic_bicycle_rdrive_1u";
 cost_mode      = "costs";
 input_bounds   = false;
-backup         = false;
-im_used        = 0;
+backup         = true;
+im_used        = 1;
 
 if all_identical
     con_nom    = 'lqr_tracking';           
-    con_mode   = 'decentralized_cbf_qp';
-    cbf_type   = 'ff_cbf';
+    con_mode   = 'centralized_cbf_qp';
+    cbf_type   = 'rv_cbf';
     pmetric    = 'high_proximity';
     pcca       = false;
-    classK_l0  = 1.0;
-    ppower     = 2;
+    classK_l0  = 10;
+    ppower     = 0.1;
 
     con_nom    = repmat({con_nom},   1, nAgents);
     con_mode   = repmat({con_mode},  1, nAgents);

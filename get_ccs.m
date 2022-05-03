@@ -1,9 +1,10 @@
-function [A,b,h,h0] = get_ccs(t,x,settings)
+function [A,b,h,h0,hysteresis] = get_ccs(t,x,settings)
 %GET_SAFETY_CONSTRAINTS This is where the safety measures are considered
 
 % Constraint parameters
 Nu      = 1;
 Na      = settings.Na;
+Nn      = settings.Nn;
 nAScons = 2; % Number of agent-specific constraints
 nIAcons = factorial(Na-1); % Number of interagent constraints
 nRows   = nAScons*Na+nIAcons;
@@ -19,7 +20,7 @@ h0 = zeros(nRows,1);
 for aa = 1:Na
     
     % Speed constraints
-    [A1,b1,h1]   = get_speed_constraints(t,x,aa,settings.SL);
+    [A1,b1,h1]   = get_speed_constraints(t,x,aa,settings);
 
     % Specify row and column index for agent
     row_idx = (-(nAScons-1):0)+aa*nAScons;
@@ -36,15 +37,32 @@ end
 [A4,b4,h4,h04] = get_collision_avoidance_constraints(t,x,settings);
 
 row_idx = nAScons*Na + (1:nIAcons);
+col_idx = 1:Na;
 
-A(row_idx,:) = A4;
+A(row_idx,col_idx) = A4;
 b(row_idx)   = b4;
 h(row_idx)   = h4;
 h0(row_idx)  = h04;
 
+hysteresis = 0;
+
+% IM-Density Constraints
+if settings.im_used
+%     [Ad,bd,hd]     = get_density_constraints(t,x,settings);
+%     [Ad,bd,hd]     = get_mass_constraints_global(t,x,settings);
+    [Ad,bd,hd]     = get_mass_constraints_pairwise(t,x,settings);
+
+    A = [Ad; A];
+    b = [bd; b];
+    h = [hd; h];
+
 end
 
-function [A,b,h] = get_speed_constraints(t,x,aa,SL)
+end
+
+function [A,b,h] = get_speed_constraints(t,x,aa,settings)
+SL = settings.SL;
+
 kf   = 10; % Class K gain
 hf   = SL - x(aa,4);
 Lfhf = 0;
@@ -53,8 +71,7 @@ Lghf = -1;
 kr   = kf;
 Lfhr = 0;
 
-backup = 1;
-if backup
+if settings.backup
     % Reverse allowed
     hr   = 100;
     Lghr = 0;
@@ -81,7 +98,9 @@ Nu = 1;
 
 % Unpack settings
 Na    = settings.Na;
+Nn    = settings.Nn;
 uNom  = settings.uNom;
+wHat  = settings.wHat;
 tmax  = settings.lookahead;
 
 % Steering input
@@ -108,6 +127,10 @@ for aa = 1:Na
     
     % Loop through all other agents for interagent completeness
     for ii = aa+1:Na
+
+        if settings.im_used && ii > Na-Nn
+            continue
+        end
         
         xa = x(aa,:);
         xi = x(ii,:);
@@ -176,7 +199,7 @@ for aa = 1:Na
         Lfh0 = 2*dx*dvx + 2*dy*dvy;
         Lfh  = 2*(dx*dvx + dy*dvy) + 2*tau*(dvx^2 + dvy^2 + dx*dax_unc + dy*day_unc) + 2*tau_dot_unc*(dx*dvx + dy*dvy + tau*(dvx^2 + dvy^2)) + 2*tau^2*(dvx*dax_unc + dvy*day_unc);        
         Lgh  = 2*tau*tau_dot_con*(dvx^2 + dvy^2) + 2*tau^2*(dvx*dax_con + dvy*day_con) + 2*tau_dot_con*(dx*dvx + dy*dvy) + 2*tau*(dx*dax_con + dy*day_con);
-       
+
         if strcmp(settings.cbf_type,'nominal_cbf')
             % Nominal CBF (Rel-Deg 2)
             H   = h0;
@@ -185,30 +208,44 @@ for aa = 1:Na
 
         elseif strcmp(settings.cbf_type,'ff_cbf')
             % Future Focused CBF
-            l0  = h0;
+%             l0  = h0;
             H   = h;
             LfH = Lfh;
             LgH = Lgh;
 
         elseif strcmp(settings.cbf_type,'rv_cbf')
-            % Robust-Virtual CBF
-            a1    = 0.1;
+%             % Robust-Virtual CBF
+            a1    = 1;
             kh0   = 1;
             H     = h   + a1*max([tau-1,eps])*h0^(1/kh0);
             LfH   = Lfh + a1*(max([tau-1,eps])*(1/kh0)*h0^(1/kh0-1)*Lfh0 + tau_dot_unc*h0^(1/kh0));
             LgH   = Lgh + a1*tau_dot_con*h0^(1/kh0);
+
+%             % Robust-Virtual CBF
+%             a1    = 0.1;
+%             kh0   = 1;
+%             H     = h   + a1*h0^(1/kh0);
+%             LfH   = Lfh + a1*(1/kh0)*h0^(1/kh0-1)*Lfh0;
+%             LgH   = Lgh;
         end
 
         % PCCA Contribution
         if settings.pcca
-            LfH = LfH + Lgh*wHat(AAA,1:4)';
+            LfH = LfH + Lgh*wHat(1:4)';
         end
+
+%         % Robust-adaptive term
+%         if ismember(aa,find(wHat~=0))
+%             LfH = LfH - 2*abs(LgH(aa)*settings.uMax(2))*exp(-h0);
+%         elseif ismember(ii,find(wHat~=0))
+%             LfH = LfH - 2*abs(LgH(ii)*settings.uMax(2))*exp(-h0);
+%         end
     
         % Inequalities: Ax <= b
         Aw(dd,1:Na*Nu)  = -LgH;
-        bw(dd)          = LfH + l0*H; 
-        hw(dd)          = H;
-        hw0(dd)         = h0;
+        bw(dd)          =  LfH + l0*H; 
+        hw(dd)          =  H;
+        hw0(dd)         =  h0;
 
         dd = dd + 1;
         ss = ss + 1;

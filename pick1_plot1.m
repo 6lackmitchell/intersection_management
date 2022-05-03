@@ -8,7 +8,7 @@ close all;
 % dyn_mode = 'double_integrator';
 dyn_mode = 'dynamic_bicycle_rdrive_1u';
 
-data = trial_data(1); % Deadlock for nominal case
+data = trial_data(4); % Deadlock for nominal case
 code = data.code;
 t = data.t;
 dt = 0.01;
@@ -17,6 +17,8 @@ u = data.u;
 u0 = data.u0;
 sols = data.sols;
 violations = data.vios;    
+barriers = data.barrier;    
+alphas   = data.alpha;    
 
 ii = fix(t / dt);
 tt = linspace(dt,ii*dt,ii);
@@ -47,7 +49,7 @@ hold on
 for jj = 1:nAgents
 %     if jj == 3
     plot(tt,u(1:ii,jj,2),'LineWidth',lw)
-    plot(tt,u0(1:ii,jj,2),'LineWidth',lw)
+    plot(tt,u0(1:ii,jj,2),':','LineWidth',lw)
 %     end
 %     plot(tt,uNom(1:ii,jj,2),':','LineWidth',lw)
 end
@@ -75,14 +77,22 @@ hold off
 % legend('\delta_1','\delta_2','\delta_3','\delta_4','\delta_5','\delta_6')
 % hold off
 
-% figure(4);
-% title('CBFs')
-% hold on
-% for jj = 1:nAgents
-%     plot(tt,safety(1:ii,jj),'LineWidth',lw)
-% end
-% legend('h_1','h_2','h_3','h_4','h_5','h_6')
-% hold off
+figure(4);
+title('Density Barrier')
+hold on
+for jj = 1:nAgents-1
+   plot(tt,barriers(1:ii,jj),'LineWidth',lw)
+end
+hold off
+
+figure(5);
+title('Alpha Param')
+hold on
+for jj = 1:nAgents-1
+   plot(tt,alphas(1:ii,jj),'LineWidth',lw)
+end
+hold off
+% ylim([-0.1 1])
 % 
 % figure(5);
 % title('Gammas')

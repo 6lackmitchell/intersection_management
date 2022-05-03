@@ -29,32 +29,46 @@ nStates    = size(x0,2);
 x          = zeros(nTimesteps,nAgents,nStates);
 u          = zeros(nTimesteps,nAgents,nControls);
 u0         = zeros(nTimesteps,nAgents,nControls);
+% sols       = zeros(nTimesteps,nAgents,2);
 sols       = zeros(nTimesteps,nAgents,nAgents);
 priority   = zeros(nTimesteps,nAgents,nAgents);
 violations = zeros(nTimesteps,nAgents,2);
 vio_mag    = zeros(nTimesteps,1);
+% barrier    = zeros(nTimesteps,1);
+barrier    = zeros(nTimesteps,nAgents);
+alpha      = zeros(nTimesteps,nAgents);
 hysteresis = zeros(nAgents,1);
 exited     = zeros(nAgents,1);
 x(1,:,:)   = x0;
 
 % More Settings
-wHat      = zeros(nAgents,nAgents*nControls);
+uLast     = zeros(nAgents,nAgents,nControls);
+wHat      = zeros(nAgents,nAgents*(nControls-1));
 thru_time = Inf*ones(nAgents,1);
 
 ii = 1;
 unom = zeros(nAgents,nControls);
 
 % Define settings structure for controllers
-settings.lookahead = 5.0;
+settings.lookahead = 4.0;
 settings.umax      = umax;
 settings.ubounds   = ubounds;
 settings.backup    = backup;
 settings.wHat      = wHat;
 settings.SL        = SL;
-settings.Lr        = Lr;
 settings.dt        = dt;
 settings.Nu        = nControls;
+settings.Nn        = nNon;
+settings.Lr        = Lr;
 
+% Intervention settings
+intervention_settings.Nu      = nControls;
+intervention_settings.Lr      = Lr;
+intervention_settings.dt      = dt;
+intervention_settings.ubounds = ubounds;
+intervention_settings.umax    = umax;
+
+% Iterate timesteps
 while ii <= nTimesteps
     continueon = false;
     breakout   = false;
@@ -69,6 +83,18 @@ while ii <= nTimesteps
         exited(aa) = exited(aa) + reached*(exited(aa)==0);
     end
 
+    % Intersection Manager Intervention (if necessary)
+    if false % Now putting inside low-level controller
+        intervention_settings.unom    = unom;
+        intervention_settings.Nn      = nNon;
+        intervention_settings.pmetric = pmetric{1};
+        intervention_settings.ppower  = ppower{1};
+        intervention_settings.prior   = priority(ii,:);
+        [unom(1:(nAgents-nNon),2),B,code] = im_intervention(t,xx,intervention_settings,u_params{1});
+    else
+        B = 100;
+    end
+
     % Check whether all vehicles have reached intersection exit
     if sum(exited) == nAgents
         break
@@ -78,33 +104,31 @@ while ii <= nTimesteps
     for aa = 1:nAgents
 
         % Configure required settings
-        settings.aa       = aa;
-        settings.cbf_type = cbf_type{aa};
-        settings.pcca     = pcca{aa};
-        settings.pmetric  = pmetric{aa};
-        settings.classk   = classk{aa};
-        settings.ppower   = ppower{aa};
-        settings.prior    = priority(ii,:);
+        settings.aa         = aa;
+        settings.wHat       = wHat(aa,:);
+        settings.cbf_type   = cbf_type{aa};
+        settings.pcca       = pcca{aa};
+        settings.pmetric    = pmetric{aa};
+        settings.classk     = classk{aa};
+        settings.ppower     = ppower{aa};
+        settings.prior      = priority(ii,:);
         settings.hysteresis = hysteresis(aa);
 
-        % Modify unom if necessary
-        if nNon > 0
-            
-            % Noncommunicating -- every other control assumed to be zero
-            if aa > nAgents - nNon
-                ctrl_idx = (-1:0)+aa*nControls;
-                ucost = unom;
-                ucost(~ismember(find(ucost>-Inf),ctrl_idx)) = 0;
-            
-            % Communicating -- every noncomm. control assumed to be zero
-            else
-                ctrl_idx = 1:nControls*(nAgents-nNon);
-                ucost = unom;
-                ucost(~ismember(find(ucost>-Inf),ctrl_idx)) = 0;
-            end
-
+        % Noncommunicating -- every other control assumed to be zero
+        if aa > nAgents - nNon
+            ctrl_idx = (-1:0)+aa*nControls;
+            ucost = unom';
+            ucost(~ismember(find(ucost>-Inf),ctrl_idx)) = 0;
+            ucost = ucost';
+            settings.im_intervene = 0;
+        
+        % Communicating -- every noncomm. control assumed to be zero
         else
-            ucost = unom;
+            ctrl_idx = 1:nControls*(nAgents-nNon);
+            ucost = unom';
+            ucost(~ismember(find(ucost>-Inf),ctrl_idx)) = 0;
+            ucost = ucost';
+            settings.im_intervene = 1;
         end
 
         % Compute control input
@@ -114,7 +138,11 @@ while ii <= nTimesteps
         if data.code == 1
             u(ii,aa,:)          = data.u;
             sols(ii,aa,:)       = data.sol;
+            uLast(aa,:,:)       = data.uSol;
             u0(ii,aa,:)         = unom(aa,:);
+%             barrier(ii)         = B;
+            barrier(ii,aa)      = data.cbf(1);
+            alpha(ii,aa)        = data.alpha;
             priority(ii,aa,:)   = data.prior;
             violations(ii,aa,:) = [data.v_vio; data.p_vio]';
             hysteresis(aa)      = data.hysteresis;
@@ -150,6 +178,8 @@ while ii <= nTimesteps
     xdot          = dynamics(t,xx,squeeze(u(ii,:,:)),settings);
     x(ii + 1,:,:) = x(ii,:,:) + dt * reshape(xdot,[1 size(xdot)]);
 
+    % Update PCCA Matrix
+    wHat = repmat(squeeze(u(ii,:,2)),nAgents,1) - uLast(:,:,2);
 
     % Restrict Angles to between -pi and pi
     if ~strcmp(func2str(dynamics),'double_integrator')
@@ -170,6 +200,8 @@ trial_data = struct('success', sum(exited)==nAgents, ...
                     't',       t,                     ...
                     'sols',    sols,                  ...
                     'vios',    violations,            ...,
+                    'barrier', barrier,               ...,
+                    'alpha',   alpha,                 ...,
                     'vmags',   vio_mag);
 
 end

@@ -41,6 +41,11 @@ Rv = eye(2);
 [Kv,~,~] = lqr(Av,Bv,Qv,Rv);
 vd = -Kv*perr;
 
+vmax = 5;
+if norm(vd) > vmax
+    vd = vd*vmax/norm(vd);
+end
+
 xdes   = [xd; yd; vd];
 xerr   = xlqr - xdes;
 
@@ -55,7 +60,7 @@ B = [0 0;
      0 1];
 
 % LQR Cost Function: x'*Q*x + u'*R*u
-xy_gain    = 2;
+xy_gain    = 0.01;
 Q(1:2,1:2) = xy_gain*Q(1:2,1:2);
 R = eye(size(B,2));
 

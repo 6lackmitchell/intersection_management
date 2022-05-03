@@ -23,4 +23,8 @@ for ii = 1:length(p)
     end
 end
 
+if length(p) < size(Q,1)
+    p = [p; zeros(size(Q,1)-length(p),1)];
+end
+
 end

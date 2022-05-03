@@ -6,23 +6,25 @@
 % end
 % 
 close all;
-x = 2.5;
-y = 5;
-a = 1;
-b = 1;
-z = -1.0:0.001:0.0;
-u = 2.1;
-f1 = a*x*y*z.*(x^2+y^2+2*x*y*z).^(1/u);
-f2 = b*x*y*z.*(x^2+y^2+2*x*y*z).^(-1/u);
-f1t = a*x*y*z.*(y^2).^(1/u);
+clear;
+K1 = 1;
+K2 = 0.5;
+K3 = 0.25;
+D = 6;
+X = 0:0.01:20;
+M1 = f(K1,X,D);
+M2 = f(K2,X,D);
+M3 = f(K3,X,D);
+
+hold on
+plot(X,M1)
+plot(X,M2)
+plot(X,M3)
+hold off
 
 
-% plot(z,f1,z,f2,z,f1+f2)
-plot(z,f1,z,f1t,z,f1+f2)
+function z = f(k,x,d)
 
-% rad2deg(acos(-2/3))
+z = 1/2 * (1 - tanh(k*(x-d)));
 
-
-function [a] = do_it(x)
-disp(x)
 end
